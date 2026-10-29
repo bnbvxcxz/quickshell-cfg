@@ -1,0 +1,4 @@
+singleton HardwareState 1.0 HardwareState.qml
+singleton SystemState 1.0 SystemState.qml
+singleton MediaState 1.0 MediaState.qml
+singleton CompositorAdapter 1.0 CompositorAdapter.qml
