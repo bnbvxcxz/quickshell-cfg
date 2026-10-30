@@ -13,6 +13,7 @@ import "."
 PanelWindow {
     id: barWindow
 
+    // [ANCHOR:WAYLAND_LAYER]
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "quickshell-bar"
 
@@ -24,9 +25,14 @@ PanelWindow {
 
     readonly property real screenScale: Metrics.scaleFor(barWindow.screen)
     readonly property int fullHeight: Metrics.scaled(Theme.baseBarHeight, screenScale)
+
+    // Explicit implicitHeight for WlrLayershell compliance
     implicitHeight: fullHeight
+    WlrLayershell.exclusiveZone: fullHeight
+
     color: Qt.alpha(Theme.background, 0.7)
 
+    // [ANCHOR:BAR_SPRING_ENTRANCE]
     property bool appeared: false
     margins.top: appeared ? 0 : -fullHeight
 
@@ -43,7 +49,8 @@ PanelWindow {
 
     Component.onCompleted: appeared = true
 
-    readonly property bool isPrimaryScreen: CompositorAdapter.isScreenPrimary(barWindow.screen)
+    // [ANCHOR:SCREEN_LOGIC]
+    readonly property bool isPrimaryScreen: barWindow.screen ? (barWindow.screen.x === 0 && barWindow.screen.y === 0) : true
     readonly property color activeWsBg: isPrimaryScreen ? Theme.secondary : Theme.tertiary
     readonly property color activeWsFg: isPrimaryScreen ? Theme.on_secondary : Theme.on_tertiary
     readonly property color inactiveWsFg: isPrimaryScreen ? Theme.secondary : Theme.tertiary

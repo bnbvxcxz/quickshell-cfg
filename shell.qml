@@ -18,7 +18,9 @@ Scope {
     ListModel { id: notifHistoryModel }
     ListModel { id: popupToastModel }
 
-    property string activePanelScreen: ""
+    // [ANCHOR:TARGET_SCREEN_STATE]
+    property string activePanelScreen: (Quickshell.screens.length > 0 && Quickshell.screens[0].name) ? Quickshell.screens[0].name : "eDP-1"
+    property string previousPanelScreen: activePanelScreen
     property bool panelOpen: false
 
     onPanelOpenChanged: {
@@ -27,17 +29,9 @@ Scope {
         }
     }
 
-    readonly property string currentFocusedMonitorName: (CompositorAdapter.focusedMonitorName !== undefined && CompositorAdapter.focusedMonitorName !== null) ? CompositorAdapter.focusedMonitorName : ""
-
-    onCurrentFocusedMonitorNameChanged: {
-        if (panelOpen && currentFocusedMonitorName !== "") {
-            activePanelScreen = currentFocusedMonitorName;
-        }
-    }
-
+    // [ANCHOR:DISMISS_ON_WINDOW_FOCUS]
     readonly property var activeWindow: CompositorAdapter.activeToplevel
     property string lastActiveWindowAddress: ""
-
     onActiveWindowChanged: {
         if (!activeWindow) return;
         let addr = activeWindow.address || "";
@@ -45,6 +39,15 @@ Scope {
             panelOpen = false;
         }
         lastActiveWindowAddress = addr;
+    }
+
+    // [ANCHOR:MONITOR_TRACKING]
+    readonly property string focusedMon: CompositorAdapter.focusedMonitorName
+    onFocusedMonChanged: {
+        if (panelOpen && focusedMon !== "" && focusedMon !== activePanelScreen) {
+            previousPanelScreen = activePanelScreen;
+            activePanelScreen = focusedMon;
+        }
     }
 
     property NotificationServer server: NotificationServer {
@@ -113,49 +116,88 @@ Scope {
         }
     }
 
+    // [ANCHOR:SCREEN_VARIANTS]
     Variants {
         model: Quickshell.screens
-        delegate: BarWindow {}
+        delegate: BarWindow {
+            required property var modelData
+            screen: modelData
+        }
     }
 
     Variants {
         model: Quickshell.screens
         delegate: ControlCenterWindow {
+            required property var modelData
+            screen: modelData
             historyModel: notifHistoryModel
-            isTargetScreen: shellRoot.panelOpen && (shellRoot.activePanelScreen === "" || (screen && screen.name === shellRoot.activePanelScreen))
+            isTargetScreen: shellRoot.panelOpen && (modelData !== null && modelData.name === shellRoot.activePanelScreen)
             isAnyPanelOpen: shellRoot.panelOpen
+            activeScreenName: shellRoot.activePanelScreen
+            previousScreenName: shellRoot.previousPanelScreen
             onRequestClose: shellRoot.panelOpen = false
+            onTriggerOpenOnThisScreen: {
+                if (modelData && modelData.name) {
+                    shellRoot.previousPanelScreen = shellRoot.activePanelScreen;
+                    shellRoot.activePanelScreen = modelData.name;
+                }
+                shellRoot.panelOpen = true;
+            }
         }
     }
 
     Variants {
         model: Quickshell.screens
         delegate: NotificationToast {
+            required property var modelData
+            screen: modelData
             model: popupToastModel
         }
     }
 
     Variants {
         model: Quickshell.screens
-        delegate: OsdWindow {}
+        delegate: OsdWindow {
+            required property var modelData
+            screen: modelData
+        }
     }
 
+    // [ANCHOR:GLOBAL_IPC]
     IpcHandler {
         target: "drawer"
         function toggle() {
-            shellRoot.panelOpen = !shellRoot.panelOpen;
-            if (shellRoot.panelOpen && shellRoot.currentFocusedMonitorName !== "") {
-                shellRoot.activePanelScreen = shellRoot.currentFocusedMonitorName;
+            if (!shellRoot.panelOpen) {
+                let target = CompositorAdapter.focusedMonitorName;
+                if (!target && Quickshell.screens.length > 0) target = Quickshell.screens[0].name;
+                shellRoot.previousPanelScreen = shellRoot.activePanelScreen ? shellRoot.activePanelScreen : target;
+                shellRoot.activePanelScreen = target;
+                shellRoot.panelOpen = true;
+            } else {
+                shellRoot.panelOpen = false;
             }
         }
         function open() {
+            let target = CompositorAdapter.focusedMonitorName;
+            if (!target && Quickshell.screens.length > 0) target = Quickshell.screens[0].name;
+            shellRoot.previousPanelScreen = shellRoot.activePanelScreen ? shellRoot.activePanelScreen : target;
+            shellRoot.activePanelScreen = target;
             shellRoot.panelOpen = true;
-            if (shellRoot.currentFocusedMonitorName !== "") {
-                shellRoot.activePanelScreen = shellRoot.currentFocusedMonitorName;
-            }
         }
         function close() {
             shellRoot.panelOpen = false;
+        }
+    }
+
+    IpcHandler {
+        target: "osd"
+        function show(jsonStr: string) {
+            try {
+                let data = JSON.parse(jsonStr);
+                HardwareState.triggerOsd(data.type || "volume", data.value || 0.5, data.icon || "󰕾", !!data.muted);
+            } catch (err) {
+                console.warn("[OSD] Parse error:", err);
+            }
         }
     }
 
@@ -167,9 +209,14 @@ Scope {
     }
 
     function togglePanel() {
-        shellRoot.panelOpen = !shellRoot.panelOpen;
-        if (shellRoot.panelOpen && shellRoot.currentFocusedMonitorName !== "") {
-            shellRoot.activePanelScreen = shellRoot.currentFocusedMonitorName;
+        if (!shellRoot.panelOpen) {
+            let target = CompositorAdapter.focusedMonitorName;
+            if (!target && Quickshell.screens.length > 0) target = Quickshell.screens[0].name;
+            shellRoot.previousPanelScreen = shellRoot.activePanelScreen ? shellRoot.activePanelScreen : target;
+            shellRoot.activePanelScreen = target;
+            shellRoot.panelOpen = true;
+        } else {
+            shellRoot.panelOpen = false;
         }
     }
 }

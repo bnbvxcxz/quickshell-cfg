@@ -5,7 +5,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Io
 import "../../config"
 import "../../services"
 import "../../components"
@@ -13,6 +12,7 @@ import "../../components"
 PanelWindow {
     id: osdWindow
 
+    // [ANCHOR:WAYLAND_LAYER]
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-osd"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -23,7 +23,6 @@ PanelWindow {
     readonly property real s: Metrics.scaleFor(osdWindow.screen)
     readonly property real screenWidth: (osdWindow.screen && osdWindow.screen.geometry) ? osdWindow.screen.geometry.width : (osdWindow.screen ? osdWindow.screen.width : 1920)
 
-    // Dynamic width proportional to screen width, clamped within scaled bounds
     implicitWidth: Math.max(Metrics.scaled(240, s), Math.min(Metrics.scaled(360, s), Math.round(screenWidth * 0.16)))
     implicitHeight: Metrics.scaled(52, s)
     margins.bottom: Metrics.scaled(70, s)
@@ -38,23 +37,7 @@ PanelWindow {
 
     visible: osdBox.opacity > 0.0
 
-    IpcHandler {
-        target: "osd"
-        function show(jsonStr: string) {
-            try {
-                let data = JSON.parse(jsonStr);
-                if (data.icon !== undefined) osdWindow.iconText = data.icon;
-                if (data.value !== undefined) osdWindow.progressVal = Math.max(0.0, Math.min(1.0, data.value));
-                if (data.muted !== undefined) osdWindow.isMuted = !!data.muted;
-
-                osdWindow.active = true;
-                hideTimer.restart();
-            } catch (err) {
-                console.warn("[OSD] Parse error:", err);
-            }
-        }
-    }
-
+    // [ANCHOR:HARDWARE_CONNECTIONS]
     Connections {
         target: HardwareState
         function onOsdTriggered(type, value, icon, muted) {
@@ -130,13 +113,11 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Metrics.scaled(8, osdWindow.s)
 
-                // Background track
                 Rectangle {
                     anchors.fill: parent
                     radius: height / 2
                     color: Qt.alpha(Theme.surface_container_highest, 0.8)
 
-                    // Colored fill bar: collapses smoothly to 0 width and fades out
                     Rectangle {
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
