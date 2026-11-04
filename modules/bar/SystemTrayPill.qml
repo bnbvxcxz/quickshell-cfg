@@ -1,8 +1,9 @@
 // Status bar system tray container.
-// Dynamically renders StatusNotifierItem icons with click activation and scale metrics.
+// Dynamically renders StatusNotifierItem icons with click activation, context menus, and scale metrics.
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Services.SystemTray
 import "../../config"
 import "../../components"
@@ -30,8 +31,8 @@ Pill {
                 radius: implicitHeight / 2
 
                 color: itemMouse.containsMouse
-                ? Qt.alpha(Theme.primary, 0.25)
-                : Qt.alpha(Theme.surface_container_highest, 0.5)
+                    ? Qt.alpha(Theme.primary, 0.25)
+                    : Qt.alpha(Theme.surface_container_highest, 0.5)
 
                 Behavior on color { ColorAnimation { duration: 100 } }
 
@@ -46,16 +47,42 @@ Pill {
                     mipmap: true
                 }
 
+               // Native context menu popup anchor
+                QsMenuAnchor {
+                    id: menuAnchor
+                    menu: itemContainer.modelData.hasMenu ? itemContainer.modelData.menu : null
+                    anchor.item: itemContainer
+                }
+
                 MouseArea {
                     id: itemMouse
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
                     onClicked: mouse => {
-                        if (mouse.button === Qt.LeftButton) itemContainer.modelData.activate();
-                        else itemContainer.modelData.secondaryActivate();
+                        // Left click ALWAYS activates (required for Discord and Electron apps)
+                        if (mouse.button === Qt.LeftButton) {
+                            itemContainer.modelData.activate();
+                        } 
+                        // Right click opens the DBus menu if it exists, otherwise falls back
+                        else if (mouse.button === Qt.RightButton) {
+                            if (itemContainer.modelData.hasMenu) {
+                                menuAnchor.open();
+                            } else {
+                                itemContainer.modelData.secondaryActivate();
+                            }
+                        } 
+                        // Middle click executes secondary action (e.g. mute toggle on audio apps)
+                        else if (mouse.button === Qt.MiddleButton) {
+                            itemContainer.modelData.secondaryActivate();
+                        }
+                    }
+
+                    onWheel: wheel => {
+                        let delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
+                        itemContainer.modelData.scroll(delta, wheel.angleDelta.y === 0);
                     }
                 }
             }

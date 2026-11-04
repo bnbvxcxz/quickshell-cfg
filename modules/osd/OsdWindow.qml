@@ -28,6 +28,7 @@ PanelWindow {
     margins.bottom: Metrics.scaled(70, s)
     color: "transparent"
 
+    property string osdType: "volume"
     property string iconText: "󰕾"
     property real progressVal: 0.5
     property bool isMuted: false
@@ -41,6 +42,7 @@ PanelWindow {
     Connections {
         target: HardwareState
         function onOsdTriggered(type, value, icon, muted) {
+            osdWindow.osdType = type;
             osdWindow.iconText = icon;
             osdWindow.progressVal = value;
             osdWindow.isMuted = muted;
@@ -97,12 +99,12 @@ PanelWindow {
                 implicitWidth: bubbleSize
                 implicitHeight: bubbleSize
                 radius: bubbleSize / 2
-                color: osdWindow.isMuted ? Qt.alpha(Theme.error, 0.2) : Qt.alpha(Theme.primary, 0.15)
+                color: (osdWindow.isMuted && osdWindow.osdType !== "capslock") ? Qt.alpha(Theme.error, 0.2) : Qt.alpha(Theme.primary, 0.15)
 
                 Text {
                     anchors.centerIn: parent
-                    text: osdWindow.isMuted ? "󰖁" : osdWindow.iconText
-                    color: osdWindow.isMuted ? Theme.error : Theme.primary
+                    text: (osdWindow.isMuted && osdWindow.osdType !== "capslock") ? "󰖁" : osdWindow.iconText
+                    color: (osdWindow.isMuted && osdWindow.osdType !== "capslock") ? Theme.error : Theme.primary
                     font.family: Typography.family
                     font.pixelSize: Metrics.scaled(15, osdWindow.s)
                     font.weight: Typography.weightRegular
@@ -110,6 +112,7 @@ PanelWindow {
             }
 
             Item {
+                visible: osdWindow.osdType !== "capslock"
                 Layout.fillWidth: true
                 Layout.preferredHeight: Metrics.scaled(8, osdWindow.s)
 
@@ -138,13 +141,19 @@ PanelWindow {
             }
 
             Text {
-                text: osdWindow.isMuted ? "MUTE" : `${Math.round(osdWindow.progressVal * 100)}%`
-                color: osdWindow.isMuted ? Theme.error : Theme.on_surface
+                text: {
+                    if (osdWindow.osdType === "capslock") return osdWindow.progressVal > 0 ? "CAPS ON" : "CAPS OFF";
+                    if (osdWindow.isMuted) return "MUTE";
+                    return `${Math.round(osdWindow.progressVal * 100)}%`;
+                }
+                color: (osdWindow.isMuted || (osdWindow.osdType === "capslock" && osdWindow.progressVal === 0)) ? Theme.error : Theme.on_surface
                 font.family: Typography.family
                 font.pixelSize: Typography.size(osdWindow.s)
                 font.weight: Typography.weightRegular
-                Layout.preferredWidth: Metrics.scaled(42, osdWindow.s)
-                horizontalAlignment: Text.AlignRight
+
+                Layout.fillWidth: osdWindow.osdType === "capslock"
+                Layout.preferredWidth: osdWindow.osdType === "capslock" ? -1 : Metrics.scaled(42, osdWindow.s)
+                horizontalAlignment: osdWindow.osdType === "capslock" ? Text.AlignLeft : Text.AlignRight
             }
         }
     }
