@@ -1,5 +1,5 @@
 // Workspace switcher indicator with spring physics.
-// Dynamically maps compositor workspaces and tracks active focus with centralized typography tokens.
+// Maps compositor workspaces, supports click-to-focus, and steps workspaces on wheel scroll.
 
 import QtQuick
 import QtQuick.Layouts
@@ -16,11 +16,12 @@ Rectangle {
     property color activeFg: Theme.on_secondary
     property color inactiveFg: Theme.secondary
 
-    // Match master Pill geometry and radius
     implicitHeight: Metrics.scaled(Theme.baseBarHeight, scaleFactor)
     implicitWidth: wsRow.implicitWidth
-    radius: Math.round(implicitHeight / 2)
+    radius: Theme.pillRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Theme.pillRadius, scaleFactor)
     color: Theme.surface_container_low
+    border.width: Theme.pillBorderWidth
+    border.color: Theme.pillBorderColor
 
     Layout.alignment: Qt.AlignVCenter
     Layout.fillHeight: false
@@ -30,10 +31,10 @@ Rectangle {
     Layout.rightMargin: 1
 
     property Item activeItem: null
+    property int scrollAcc: 0
 
     function updateActiveTarget() {
-        if (!Hyprland.focusedWorkspace) return;
-        let targetId = Hyprland.focusedWorkspace.id;
+        let targetId = CompositorAdapter.activeWsId;
         for (let i = 0; i < wsRepeater.count; i++) {
             let child = wsRepeater.itemAt(i);
             if (child && child.wsId === targetId) {
@@ -43,12 +44,48 @@ Rectangle {
         }
     }
 
+    function handleWheel(wheel) {
+        let delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
+        root.scrollAcc += delta;
+        while (Math.abs(root.scrollAcc) >= 120) {
+            // Scroll up steps left (-1); scroll down steps right (+1).
+            let dir = root.scrollAcc > 0 ? -1 : 1;
+            root.stepRelative(dir);
+            root.scrollAcc -= (root.scrollAcc > 0 ? 120 : -120);
+        }
+        wheel.accepted = true;
+    }
+
+    function stepRelative(dir) {
+        let list = CompositorAdapter.workspaces;
+        if (!list || list.length <= 1) return CompositorAdapter.stepWorkspace(dir);
+
+        let curId = CompositorAdapter.activeWsId;
+        let idx = -1;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id === curId) {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx === -1) return CompositorAdapter.stepWorkspace(dir);
+        let nextIdx = (idx + dir + list.length) % list.length;
+        CompositorAdapter.dispatchWorkspace(list[nextIdx].id);
+    }
+
     Connections {
-        target: Hyprland
-        function onFocusedWorkspaceChanged() { root.updateActiveTarget() }
+        target: CompositorAdapter
+        function onActiveWsIdChanged() { root.updateActiveTarget() }
     }
 
     SpringBehavior { id: springPresets; mode: "default" }
+
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
+        onWheel: wheel => root.handleWheel(wheel)
+    }
 
     Rectangle {
         id: activeIndicator
@@ -93,11 +130,7 @@ Rectangle {
 
         Repeater {
             id: wsRepeater
-            model: {
-                if (!Hyprland.workspaces) return [];
-                let list = Hyprland.workspaces.values.slice();
-                return list.sort((a, b) => a.id - b.id);
-            }
+            model: CompositorAdapter.workspaces
 
             onCountChanged: Qt.callLater(root.updateActiveTarget)
 
@@ -105,13 +138,12 @@ Rectangle {
                 id: wsBtn
                 required property var modelData
                 readonly property int wsId: modelData.id
-                property bool isActive: Hyprland.focusedWorkspace && (Hyprland.focusedWorkspace.id === wsId)
+                property bool isActive: CompositorAdapter.activeWsId === wsId
                 property bool isOccupied: modelData.windows > 0
 
                 readonly property int hPad: Math.round(8 * root.scaleFactor)
                 width: wsText.implicitWidth + (hPad * 2)
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
+                height: wsRow.height
 
                 Text {
                     id: wsText
@@ -124,7 +156,9 @@ Rectangle {
                     }
                     font.family: Typography.family
                     font.pixelSize: Typography.size(root.scaleFactor)
-                    font.weight: wsBtn.isActive ? Typography.weightMedium : Typography.weightRegular
+                    font.bold: Typography.globalBold
+                    font.weight: wsBtn.isActive ? Typography.weightBold : Typography.globalWeight
+                    font.italic: Typography.globalItalic
 
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
@@ -133,6 +167,7 @@ Rectangle {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: CompositorAdapter.dispatchWorkspace(wsBtn.wsId)
+                    onWheel: wheel => root.handleWheel(wheel)
                 }
 
                 Component.onCompleted: {

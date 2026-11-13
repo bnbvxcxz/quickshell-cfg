@@ -1,5 +1,5 @@
 // Status bar trigger button for the Control Center drawer.
-// Toggles the drawer open state via IPC and reflects active panel status.
+// Toggles the drawer open state and reflects active panel status.
 
 import QtQuick
 import QtQuick.Layouts
@@ -10,19 +10,13 @@ import "../../components"
 Pill {
     id: root
 
-    readonly property bool isOpen: (typeof shellRoot !== "undefined") ? shellRoot.panelOpen : false
+    readonly property bool isOpen: NotificationState.panelOpen
 
     implicitWidth: implicitHeight
     horizontalPadding: 0
     pillColor: isOpen ? Theme.primary : Theme.surface_container_high
 
-    onClicked: {
-        if (typeof shellRoot !== "undefined") {
-            shellRoot.togglePanel();
-        } else {
-            HardwareState.runCmd("quickshell ipc call drawer toggle");
-        }
-    }
+    onClicked: NotificationState.toggleRequested()
 
     Pill.Icon {
         text: root.isOpen ? "󰅀" : "󰍜"

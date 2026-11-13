@@ -1,6 +1,5 @@
 // Status bar package update counter.
-// Launches update script on click, maps window coordinates reactively,
-// and colors the pill based on the averaged health states of Arch, AUR, and Flatpak.
+// Launches update script on click and displays per-source breakdown popup on hover.
 
 import QtQuick
 import QtQuick.Layouts
@@ -14,12 +13,8 @@ Pill {
 
     property var barWindowRef: null
 
-    readonly property int avgState: SystemState.averagedState
+    readonly property int avgState: SystemState.avgState
 
-    // 3 Error Color States:
-    // State 0 (whatever):   tertiary_container / tertiary
-    // State 1 (noticeable): error_container / on_error_container
-    // State 2 (bad bad):    error / on_error
     readonly property color currentPillBg: {
         switch (avgState) {
             case 2: return Theme.error;
@@ -45,7 +40,7 @@ Pill {
     }
 
     pillColor: currentPillBg
-    visible: SystemState.updateCount > 0
+    visible: SystemState.updCount > 0
     Layout.preferredWidth: visible ? -1 : 0
     hoverEnabled: true
 
@@ -58,7 +53,7 @@ Pill {
     }
 
     Pill.Label {
-        text: `${SystemState.updateCount}`
+        text: `${SystemState.updCount}`
         color: root.currentPillFg
         scaleFactor: root.scaleFactor
     }
@@ -80,7 +75,7 @@ Pill {
         anchor.edges: Edges.Bottom
         anchor.gravity: Edges.Bottom
 
-        visible: (root.containsMouse || popupHoverArea.containsMouse) && SystemState.updateCount > 0
+        visible: (root.containsMouse || popupHoverArea.containsMouse) && SystemState.updCount > 0
         color: "transparent"
 
         implicitWidth: breakdownCard.implicitWidth
@@ -123,8 +118,8 @@ Pill {
                     }
                     Item { Layout.fillWidth: true }
                     Text {
-                        text: `${SystemState.updatesArch}`
-                        color: SystemState.updatesArch > 0 ? root.colorForState(SystemState.archState, Theme.primary) : Theme.outline
+                        text: `${SystemState.updArch}`
+                        color: SystemState.updArch > 0 ? root.colorForState(SystemState.archState, Theme.primary) : Theme.outline
                         font.family: Typography.family
                         font.pixelSize: Typography.sizeSmall(root.scaleFactor)
                         font.bold: Typography.globalBold
@@ -146,8 +141,8 @@ Pill {
                     }
                     Item { Layout.fillWidth: true }
                     Text {
-                        text: `${SystemState.updatesAur}`
-                        color: SystemState.updatesAur > 0 ? root.colorForState(SystemState.aurState, Theme.tertiary) : Theme.outline
+                        text: `${SystemState.updAur}`
+                        color: SystemState.updAur > 0 ? root.colorForState(SystemState.aurState, Theme.tertiary) : Theme.outline
                         font.family: Typography.family
                         font.pixelSize: Typography.sizeSmall(root.scaleFactor)
                         font.bold: Typography.globalBold
@@ -169,8 +164,8 @@ Pill {
                     }
                     Item { Layout.fillWidth: true }
                     Text {
-                        text: `${SystemState.updatesFlatpak}`
-                        color: SystemState.updatesFlatpak > 0 ? root.colorForState(SystemState.flatpakState, Theme.secondary) : Theme.outline
+                        text: `${SystemState.updFlatpak}`
+                        color: SystemState.updFlatpak > 0 ? root.colorForState(SystemState.flatpakState, Theme.secondary) : Theme.outline
                         font.family: Typography.family
                         font.pixelSize: Typography.sizeSmall(root.scaleFactor)
                         font.bold: Typography.globalBold

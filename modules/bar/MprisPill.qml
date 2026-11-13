@@ -10,13 +10,20 @@ import "../../components"
 Pill {
     id: root
 
-    readonly property string timeString: MediaState.trackLen > 0
-    ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen))
-    : (MediaState.isPlaying ? MediaState.formatTime(MediaState.trackPos) : "--:--")
+    readonly property string timeStr: MediaState.trackLen > 0
+        ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen))
+        : (MediaState.isPlaying ? MediaState.formatTime(MediaState.trackPos) : "--:--")
 
     visible: MediaState.hasMedia
     Layout.preferredWidth: visible ? -1 : 0
+
     onClicked: MediaState.togglePlay()
+    onRightClicked: MediaState.next()
+    onMiddleClicked: MediaState.previous()
+    onWheelMoved: steps => {
+        if (steps > 0) MediaState.next();
+        else MediaState.previous();
+    }
 
     Pill.Icon {
         text: MediaState.isPlaying ? "󰏤" : "󰐊"
@@ -25,7 +32,7 @@ Pill {
     }
 
     Pill.Label {
-        text: root.timeString
+        text: root.timeStr
         color: Theme.secondary
         scaleFactor: root.scaleFactor
     }

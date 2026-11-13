@@ -1,4 +1,6 @@
-singleton HardwareState 1.0 HardwareState.qml
-singleton SystemState 1.0 SystemState.qml
-singleton MediaState 1.0 MediaState.qml
+module services
 singleton CompositorAdapter 1.0 CompositorAdapter.qml
+singleton HardwareState 1.0 HardwareState.qml
+singleton MediaState 1.0 MediaState.qml
+singleton NotificationState 1.0 NotificationState.qml
+singleton SystemState 1.0 SystemState.qml

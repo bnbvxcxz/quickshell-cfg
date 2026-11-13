@@ -1,5 +1,5 @@
 // Status bar volume module.
-// Displays audio mute state, percentage, and handles volume scrolling and control launcher.
+// Tracks default sink state, percentage, scroll adjustment, and audio mixer launcher.
 
 import QtQuick
 import "../../config"
@@ -10,18 +10,21 @@ Pill {
     id: root
 
     onClicked: HardwareState.runCmd("pavucontrol")
+    onRightClicked: HardwareState.toggleMute(true)
     onMiddleClicked: HardwareState.toggleMute(false)
-    onWheelMoved: steps => HardwareState.adjustVolume(steps, false)
+    onWheelMoved: steps => HardwareState.adjustVolume(steps, true)
+
+    readonly property color fgColor: HardwareState.isMuted ? Theme.error : Theme.primary
 
     Pill.Icon {
-        text: HardwareState.isMuted ? "󰖁" : "󰕾"
-        color: HardwareState.isMuted ? Theme.error : Theme.primary
+        text: HardwareState.volumeIcon
+        color: root.fgColor
         scaleFactor: root.scaleFactor
     }
 
     Pill.Label {
         text: HardwareState.isMuted ? "Muted" : `${Math.round(HardwareState.volume * 100)}%`
-        color: HardwareState.isMuted ? Theme.error : Theme.primary
+        color: root.fgColor
         scaleFactor: root.scaleFactor
     }
 }

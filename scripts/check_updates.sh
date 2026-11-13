@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
+# Queries pending Arch, AUR, and Flatpak package updates in parallel.
+# Caches results in /tmp for 30 minutes to avoid pacman database lock contention.
 
 cache_file="/tmp/quickshell-update-cache"
 now=$(date +%s)
-cache_age=$(stat -c \%Y "$cache_file" 2>/dev/null || echo 0)
+cache_age=$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)
 
 if [ ! -f "$cache_file" ] || (( now - cache_age > 1800 )); then
     tmp_dir=$(mktemp -d /tmp/qs-upd.XXXXXX)
 
-    # Parallel queries: pending updates & total installed packages
     (checkupdates 2>/dev/null | grep -cve '^\s*$' > "$tmp_dir/arch_up") &
     (pacman -Qqn 2>/dev/null | wc -l > "$tmp_dir/arch_total") &
 
@@ -26,7 +27,6 @@ if [ ! -f "$cache_file" ] || (( now - cache_age > 1800 )); then
     flat_tot=$(cat "$tmp_dir/flat_total" 2>/dev/null || echo 1)
     rm -rf "$tmp_dir"
 
-    # Sane lower bounds to prevent divide-by-zero
     (( arch_tot < 1 )) && arch_tot=1
     (( aur_tot < 1 )) && aur_tot=1
     (( flat_tot < 1 )) && flat_tot=1

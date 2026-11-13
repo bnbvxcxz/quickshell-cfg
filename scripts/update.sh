@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Runs system and Flatpak upgrades in an interactive terminal session.
+# Invalidates the update cache and triggers an IPC refresh on completion.
 
 yay
 flatpak update -y
@@ -6,8 +8,8 @@ flatpak update -y
 rm -f /tmp/quickshell-update-cache
 
 echo -e "\nVerifying update status..."
-$HOME/.config/quickshell/scripts/check_updates.sh > /dev/null
+"$HOME/.config/quickshell/scripts/check_updates.sh" > /dev/null
+quickshell ipc call updates refresh >/dev/null 2>&1 || true
 
-# Signal Quickshell bar if IPC target exists, or clean exit
 echo "Done! Press enter to exit."
 read -r

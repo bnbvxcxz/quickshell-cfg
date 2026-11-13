@@ -1,5 +1,5 @@
 // Per-monitor on-screen display overlay.
-// Displays floating progress feedback for volume and brightness changes driven by spring physics.
+// Displays floating progress feedback for volume and brightness changes.
 
 import QtQuick
 import QtQuick.Layouts
@@ -10,9 +10,8 @@ import "../../services"
 import "../../components"
 
 PanelWindow {
-    id: osdWindow
+    id: root
 
-    // [ANCHOR:WAYLAND_LAYER]
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-osd"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -20,101 +19,90 @@ PanelWindow {
 
     anchors { bottom: true }
 
-    readonly property real s: Metrics.scaleFor(osdWindow.screen)
-    readonly property real screenWidth: (osdWindow.screen && osdWindow.screen.geometry) ? osdWindow.screen.geometry.width : (osdWindow.screen ? osdWindow.screen.width : 1920)
+    readonly property real s: Metrics.scaleFor(root.screen)
+    readonly property real sW: (root.screen && root.screen.geometry) ? root.screen.geometry.width : (root.screen ? root.screen.width : 1920)
 
-    implicitWidth: Math.max(Metrics.scaled(240, s), Math.min(Metrics.scaled(360, s), Math.round(screenWidth * 0.16)))
+    implicitWidth: Math.max(Metrics.scaled(240, s), Math.min(Metrics.scaled(360, s), Math.round(sW * 0.16)))
     implicitHeight: Metrics.scaled(52, s)
     margins.bottom: Metrics.scaled(70, s)
     color: "transparent"
 
-    property string osdType: "volume"
-    property string iconText: "󰕾"
-    property real progressVal: 0.5
-    property bool isMuted: false
-    property bool active: false
+    property string type: "volume"
+    property string ico: "󰕾"
+    property real prg: 0.5
+    property bool isMute: false
+    property bool act: false
 
-    readonly property bool hasFill: !isMuted && progressVal > 0.0
+    readonly property bool hasFill: !isMute && prg > 0.0
 
-    visible: osdBox.opacity > 0.0
+    visible: box.opacity > 0.0
 
-    // [ANCHOR:HARDWARE_CONNECTIONS]
     Connections {
         target: HardwareState
-        function onOsdTriggered(type, value, icon, muted) {
-            osdWindow.osdType = type;
-            osdWindow.iconText = icon;
-            osdWindow.progressVal = value;
-            osdWindow.isMuted = muted;
-            osdWindow.active = true;
-            hideTimer.restart();
+        function onOsdTriggered(t, val, i, m) {
+            root.type = t;
+            root.ico = i;
+            root.prg = val;
+            root.isMute = m;
+            root.act = true;
+            hide.restart();
         }
     }
 
     Timer {
-        id: hideTimer
+        id: hide
         interval: 1400
         running: false
-        onTriggered: osdWindow.active = false
+        onTriggered: root.act = false
     }
 
     SpringBehavior {
-        id: springPresets
-        mode: osdWindow.active ? "instant" : "exit"
+        id: sprg
+        mode: root.act ? "instant" : "exit"
     }
 
     Rectangle {
-        id: osdBox
+        id: box
         anchors.fill: parent
-        radius: Metrics.scaled(14, osdWindow.s)
+        radius: Metrics.scaled(14, root.s)
         color: Qt.alpha(Theme.surface_container_lowest, 0.82)
         border.color: Qt.alpha(Theme.outline_variant, 0.65)
         border.width: 1
 
-        opacity: osdWindow.active ? 1.0 : 0.0
-        scale: osdWindow.active ? 1.0 : 0.88
+        opacity: root.act ? 1.0 : 0.0
+        scale: root.act ? 1.0 : 0.88
         transformOrigin: Item.Center
 
-        Behavior on opacity {
-            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-        }
-
-        Behavior on scale {
-            SpringAnimation {
-                spring: springPresets.stiffnessVal
-                damping: springPresets.dampingVal
-                mass: 1.0
-                epsilon: 0.01
-            }
-        }
+        Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on scale { SpringAnimation { spring: sprg.stiffnessVal; damping: sprg.dampingVal; mass: 1.0; epsilon: 0.01 } }
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: Metrics.scaled(16, osdWindow.s)
-            anchors.rightMargin: Metrics.scaled(16, osdWindow.s)
-            spacing: Metrics.scaled(12, osdWindow.s)
+            anchors.leftMargin: Metrics.scaled(16, root.s)
+            anchors.rightMargin: Metrics.scaled(16, root.s)
+            spacing: Metrics.scaled(12, root.s)
 
             Rectangle {
-                readonly property int bubbleSize: Metrics.scaled(30, osdWindow.s)
-                implicitWidth: bubbleSize
-                implicitHeight: bubbleSize
-                radius: bubbleSize / 2
-                color: (osdWindow.isMuted && osdWindow.osdType !== "capslock") ? Qt.alpha(Theme.error, 0.2) : Qt.alpha(Theme.primary, 0.15)
+                readonly property int bSize: Metrics.scaled(30, root.s)
+                implicitWidth: bSize
+                implicitHeight: bSize
+                radius: bSize / 2
+                color: (root.isMute && root.type !== "capslock") ? Qt.alpha(Theme.error, 0.2) : Qt.alpha(Theme.primary, 0.15)
 
                 Text {
                     anchors.centerIn: parent
-                    text: (osdWindow.isMuted && osdWindow.osdType !== "capslock") ? "󰖁" : osdWindow.iconText
-                    color: (osdWindow.isMuted && osdWindow.osdType !== "capslock") ? Theme.error : Theme.primary
+                    text: (root.isMute && root.type !== "capslock") ? "󰖁" : root.ico
+                    color: (root.isMute && root.type !== "capslock") ? Theme.error : Theme.primary
                     font.family: Typography.family
-                    font.pixelSize: Metrics.scaled(15, osdWindow.s)
+                    font.pixelSize: Metrics.scaled(15, root.s)
                     font.weight: Typography.weightRegular
                 }
             }
 
             Item {
-                visible: osdWindow.osdType !== "capslock"
+                visible: root.type !== "capslock"
                 Layout.fillWidth: true
-                Layout.preferredHeight: Metrics.scaled(8, osdWindow.s)
+                Layout.preferredHeight: Metrics.scaled(8, root.s)
 
                 Rectangle {
                     anchors.fill: parent
@@ -125,35 +113,31 @@ PanelWindow {
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
                         anchors.left: parent.left
-                        width: parent.width * Math.max(0.0, Math.min(1.0, osdWindow.progressVal))
+                        width: parent.width * Math.max(0.0, Math.min(1.0, root.prg))
                         radius: height / 2
                         color: Theme.primary
-                        opacity: osdWindow.hasFill ? 1.0 : 0.0
+                        opacity: root.hasFill ? 1.0 : 0.0
 
-                        Behavior on width {
-                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                        }
-                        Behavior on opacity {
-                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                        }
+                        Behavior on width { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
                     }
                 }
             }
 
             Text {
                 text: {
-                    if (osdWindow.osdType === "capslock") return osdWindow.progressVal > 0 ? "CAPS ON" : "CAPS OFF";
-                    if (osdWindow.isMuted) return "MUTE";
-                    return `${Math.round(osdWindow.progressVal * 100)}%`;
+                    if (root.type === "capslock") return root.prg > 0 ? "CAPS ON" : "CAPS OFF";
+                    if (root.isMute) return "MUTE";
+                    return `${Math.round(root.prg * 100)}%`;
                 }
-                color: (osdWindow.isMuted || (osdWindow.osdType === "capslock" && osdWindow.progressVal === 0)) ? Theme.error : Theme.on_surface
+                color: (root.isMute || (root.type === "capslock" && root.prg === 0)) ? Theme.error : Theme.on_surface
                 font.family: Typography.family
-                font.pixelSize: Typography.size(osdWindow.s)
+                font.pixelSize: Typography.size(root.s)
                 font.weight: Typography.weightRegular
 
-                Layout.fillWidth: osdWindow.osdType === "capslock"
-                Layout.preferredWidth: osdWindow.osdType === "capslock" ? -1 : Metrics.scaled(42, osdWindow.s)
-                horizontalAlignment: osdWindow.osdType === "capslock" ? Text.AlignLeft : Text.AlignRight
+                Layout.fillWidth: root.type === "capslock"
+                Layout.preferredWidth: root.type === "capslock" ? -1 : Metrics.scaled(42, root.s)
+                horizontalAlignment: root.type === "capslock" ? Text.AlignLeft : Text.AlignRight
             }
         }
     }

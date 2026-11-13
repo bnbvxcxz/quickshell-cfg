@@ -1,8 +1,9 @@
 // Status bar idle inhibitor toggle.
-// Manages systemd-inhibit idle sleep locks.
+// Manages systemd-inhibit idle sleep locks without external pkill calls.
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import "../../config"
 import "../../services"
 import "../../components"
@@ -15,13 +16,15 @@ Pill {
     horizontalPadding: 0
     pillColor: inhibited ? Theme.primary_container : Theme.surface_container_high
 
+    Process {
+        id: inhibitor
+        command: ["systemd-inhibit", "--what=idle", "--who=quickshell", "--why=Bar inhibitor", "sleep", "infinity"]
+    }
+
     onClicked: {
         root.inhibited = !root.inhibited;
-        if (root.inhibited) {
-            HardwareState.runCmd("systemd-inhibit --what=idle --who=quickshell --why='Bar inhibitor' sleep infinity &");
-        } else {
-            HardwareState.runCmd("pkill -f 'sleep infinity'");
-        }
+        // Toggling running = false cleanly stops the child process in Quickshell.
+        inhibitor.running = root.inhibited;
     }
 
     Pill.Icon {

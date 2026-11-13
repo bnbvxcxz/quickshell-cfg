@@ -35,7 +35,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.sliderHeight
             radius: Theme.cornerRadius
-            color: Qt.alpha(Theme.surface_container_high, 0.7)
+            color: Qt.alpha(Theme.surface_container_high, Theme.cardHighOpacity)
 
             RowLayout {
                 anchors.fill: parent
@@ -44,7 +44,7 @@ Item {
                 spacing: Math.round(8 * root.scaleFactor)
 
                 Text {
-                    text: HardwareState.isMuted ? "󰖁" : "󰕾"
+                    text: HardwareState.volumeIcon
                     color: HardwareState.isMuted ? Theme.error : Theme.primary
                     font.family: Typography.family
                     font.pixelSize: Typography.size(root.scaleFactor)
@@ -60,7 +60,7 @@ Item {
                 }
 
                 Item {
-                    id: volTrackContainer
+                    id: volTrackBox
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.round(18 * root.scaleFactor)
 
@@ -82,12 +82,12 @@ Item {
 
                     Rectangle {
                         readonly property real knobDim: Math.round(12 * root.scaleFactor)
-                        x: Math.max(0, Math.min(volTrackContainer.width - width, (volTrackContainer.width * HardwareState.volume) - (width / 2)))
+                        x: Math.max(0, Math.min(volTrackBox.width - width, (volTrackBox.width * HardwareState.volume) - (width / 2)))
                         anchors.verticalCenter: parent.verticalCenter
                         width: knobDim
                         height: knobDim
                         radius: knobDim / 2
-                        color: Theme.primary
+                        color: HardwareState.isMuted ? Theme.outline : Theme.primary
                         border.color: Theme.background
                         border.width: 1.5
                     }
@@ -110,24 +110,24 @@ Item {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 preventStealing: true
-                property int scrollAccumulator: 0
+                property int scrollAcc: 0
 
-                function updateFromMouse(mouseX) {
-                    let leadOffset = Math.round(32 * root.scaleFactor);
-                    let trackWidth = width - Math.round(42 * root.scaleFactor);
-                    let pct = Math.max(0.0, Math.min(1.0, (mouseX - leadOffset) / trackWidth));
+                function setFromX(mx) {
+                    let pad = Math.round(32 * root.scaleFactor);
+                    let w = Math.max(1, width - Math.round(78 * root.scaleFactor));
+                    let pct = Math.max(0.0, Math.min(1.0, (mx - pad) / w));
                     HardwareState.setVolumePercent(pct, false);
                 }
 
-                onClicked: mouse => updateFromMouse(mouse.x)
-                onPositionChanged: mouse => { if (pressed) updateFromMouse(mouse.x); }
+                onClicked: mouse => setFromX(mouse.x)
+                onPositionChanged: mouse => { if (pressed) setFromX(mouse.x); }
 
                 onWheel: wheel => {
-                    scrollAccumulator += wheel.angleDelta.y;
-                    let steps = Math.trunc(scrollAccumulator / 120);
+                    scrollAcc += wheel.angleDelta.y;
+                    let steps = Math.trunc(scrollAcc / 120);
                     if (steps !== 0) {
                         HardwareState.adjustVolume(steps, false);
-                        scrollAccumulator -= steps * 120;
+                        scrollAcc -= steps * 120;
                     }
                     wheel.accepted = true;
                 }
@@ -138,7 +138,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.sliderHeight
             radius: Theme.cornerRadius
-            color: Qt.alpha(Theme.surface_container_high, 0.7)
+            color: Qt.alpha(Theme.surface_container_high, Theme.cardHighOpacity)
 
             RowLayout {
                 anchors.fill: parent
@@ -147,7 +147,7 @@ Item {
                 spacing: Math.round(8 * root.scaleFactor)
 
                 Text {
-                    text: "󰃟"
+                    text: HardwareState.brightnessIcon
                     color: Theme.primary
                     font.family: Typography.family
                     font.pixelSize: Typography.size(root.scaleFactor)
@@ -157,7 +157,7 @@ Item {
                 }
 
                 Item {
-                    id: briTrackContainer
+                    id: briTrackBox
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.round(18 * root.scaleFactor)
 
@@ -179,7 +179,7 @@ Item {
 
                     Rectangle {
                         readonly property real knobDim: Math.round(12 * root.scaleFactor)
-                        x: Math.max(0, Math.min(briTrackContainer.width - width, (briTrackContainer.width * HardwareState.brightness) - (width / 2)))
+                        x: Math.max(0, Math.min(briTrackBox.width - width, (briTrackBox.width * HardwareState.brightness) - (width / 2)))
                         anchors.verticalCenter: parent.verticalCenter
                         width: knobDim
                         height: knobDim
@@ -207,24 +207,24 @@ Item {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 preventStealing: true
-                property int scrollAccumulator: 0
+                property int scrollAcc: 0
 
-                function updateFromMouse(mouseX) {
-                    let leadOffset = Math.round(32 * root.scaleFactor);
-                    let trackWidth = width - Math.round(42 * root.scaleFactor);
-                    let pct = Math.max(0.01, Math.min(1.0, (mouseX - leadOffset) / trackWidth));
+                function setFromX(mx) {
+                    let pad = Math.round(32 * root.scaleFactor);
+                    let w = Math.max(1, width - Math.round(78 * root.scaleFactor));
+                    let pct = Math.max(0.01, Math.min(1.0, (mx - pad) / w));
                     HardwareState.setBrightnessPercent(pct, false);
                 }
 
-                onClicked: mouse => updateFromMouse(mouse.x)
-                onPositionChanged: mouse => { if (pressed) updateFromMouse(mouse.x); }
+                onClicked: mouse => setFromX(mouse.x)
+                onPositionChanged: mouse => { if (pressed) setFromX(mouse.x); }
 
                 onWheel: wheel => {
-                    scrollAccumulator += wheel.angleDelta.y;
-                    let steps = Math.trunc(scrollAccumulator / 120);
+                    scrollAcc += wheel.angleDelta.y;
+                    let steps = Math.trunc(scrollAcc / 120);
                     if (steps !== 0) {
                         HardwareState.adjustBrightness(steps, false);
-                        scrollAccumulator -= steps * 120;
+                        scrollAcc -= steps * 120;
                     }
                     wheel.accepted = true;
                 }

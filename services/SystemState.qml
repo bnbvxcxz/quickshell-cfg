@@ -1,80 +1,239 @@
 // System environment state monitor.
-// Aggregates pending package updates, power metrics, and network interfaces.
+// Uses native UPower (battery) and Quickshell.Networking (Wi-Fi/Ethernet), plus check_updates.sh.
 
 pragma Singleton
 import QtQuick
+import Quickshell
 import Quickshell.Io
+import Quickshell.Networking
+import Quickshell.Services.UPower
 
 Item {
     id: root
 
-    property int updatesArch: 0
-    property int totalArch: 1
-    property int updatesAur: 0
-    property int totalAur: 1
-    property int updatesFlatpak: 0
-    property int totalFlatpak: 1
+    IpcHandler {
+        target: "test"
+        function battery(pct: string, status: string) {
+            root.batTestActive = true;
+            root.setBatteryState(parseInt(pct) || 0, status || "Discharging");
+        }
+        function wifi(ssid: string, signal: string) {
+            root.netTestActive = true;
+            root.setWifiState(ssid, parseInt(signal) || 0);
+        }
+        function ethernet(ip: string) {
+            root.netTestActive = true;
+            root.netIcon = "󰈀";
+            root.netName = ip || "10.0.0.2/24";
+            root.netTxt = `󰈀   ${root.netName}`;
+        }
+        function updates(arch: string, aur: string, flatpak: string) {
+            root.updArch = parseInt(arch) || 0;
+            root.totArch = 800;
+            root.updAur = parseInt(aur) || 0;
+            root.totAur = 50;
+            root.updFlatpak = parseInt(flatpak) || 0;
+            root.totFlatpak = 20;
+        }
+        function reset() {
+            root.batTestActive = false;
+            root.netTestActive = false;
+            root.syncUPower();
+            root.syncNetwork();
+            root.refreshUpdates();
+        }
+    }
 
-    readonly property int updateCount: updatesArch + updatesAur + updatesFlatpak
+    property int updArch: 0
+    property int totArch: 1
+    property int updAur: 0
+    property int totAur: 1
+    property int updFlatpak: 0
+    property int totFlatpak: 1
 
-    // Raw Outdated Ratios per source
-    readonly property real archRatio: updatesArch / Math.max(1, totalArch)
-    readonly property real aurRatio: updatesAur / Math.max(1, totalAur)
-    readonly property real flatpakRatio: updatesFlatpak / Math.max(1, totalFlatpak)
+    readonly property int updCount: updArch + updAur + updFlatpak
+    readonly property real archRatio: updArch / Math.max(1, totArch)
+    readonly property real aurRatio: updAur / Math.max(1, totAur)
+    readonly property real flatpakRatio: updFlatpak / Math.max(1, totFlatpak)
 
-    // Sane threshold percentages per source:
-    // Arch Repos (core system): 2% is noticeable (~20+ pkgs), 5% is bad bad (~50+ pkgs)
     readonly property int archState: {
-        if (updatesArch === 0) return 0;
+        if (updArch === 0) return 0;
         if (archRatio >= 0.05) return 2;
         if (archRatio >= 0.02) return 1;
         return 0;
     }
 
-    // AUR (user tools): 5% is noticeable, 15% is bad bad
     readonly property int aurState: {
-        if (updatesAur === 0) return 0;
+        if (updAur === 0) return 0;
         if (aurRatio >= 0.15) return 2;
         if (aurRatio >= 0.05) return 1;
         return 0;
     }
 
-    // Flatpaks (bundled apps): 20% is noticeable, 40% is bad bad
     readonly property int flatpakState: {
-        if (updatesFlatpak === 0) return 0;
+        if (updFlatpak === 0) return 0;
         if (flatpakRatio >= 0.40) return 2;
         if (flatpakRatio >= 0.20) return 1;
         return 0;
     }
 
-    // Active color tier derived from the average of all 3 states (0 = low, 1 = noticeable, 2 = critical)
-    readonly property int averagedState: {
-        if (updateCount === 0) return 0;
+    readonly property int avgState: {
+        if (updCount === 0) return 0;
         let avg = (archState + aurState + flatpakState) / 3.0;
-        if (avg >= 1.34) return 2;      // bad bad
-        if (avg >= 0.67) return 1;      // noticeable
-        return 0;                       // whatever
+        if (avg >= 1.34) return 2;
+        if (avg >= 0.67) return 1;
+        return 0;
     }
 
-    property string batIcon: "󰂀"
-    property string batCapacity: "100%"
-    property string netText: "󰈀   connecting"
+    property bool batTestActive: false
+    property bool batPresent: false
+    property int batPct: 100
+    property string batStatus: "Discharging"
+    property string batIco: "󰁹"
+    property string batCap: "100%"
+    readonly property bool isBatCharging: batStatus === "Charging" || batStatus === "Full"
+
+    property bool netTestActive: false
+    property string netIcon: "󰤭"
+    property string netName: "disconnected"
+    property string netTxt: "󰤭   disconnected"
+
+    readonly property var batDev: UPower.displayDevice
+
+    function syncUPower() {
+        if (root.batTestActive) return;
+        if (!batDev || !batDev.ready || !batDev.isPresent || !batDev.isLaptopBattery) {
+            root.batPresent = false;
+            return;
+        }
+
+        let pct = batDev.percentage <= 1.0 ? Math.round(batDev.percentage * 100) : Math.round(batDev.percentage);
+        let st = "Discharging";
+        if (batDev.state === UPowerDeviceState.Charging) st = "Charging";
+        else if (batDev.state === UPowerDeviceState.FullyCharged) st = "Full";
+
+        setBatteryState(pct, st);
+    }
+
+    Connections {
+        target: root.batDev || null
+        function onPercentageChanged() { root.syncUPower() }
+        function onStateChanged() { root.syncUPower() }
+        function onReadyChanged() { root.syncUPower() }
+        function onIsPresentChanged() { root.syncUPower() }
+    }
+
+    function syncNetwork() {
+        if (root.netTestActive) return;
+        let devs = (Networking.devices && Networking.devices.values) ? Networking.devices.values : [];
+
+        // Prefer active wired link if connected, otherwise active Wi-Fi network.
+        for (let i = 0; i < devs.length; i++) {
+            let d = devs[i];
+            if (d && d.type === DeviceType.Wired && d.connected) {
+                root.netIcon = "󰈀";
+                root.netName = d.name || "Ethernet";
+                root.netTxt = `󰈀   ${root.netName}`;
+                return;
+            }
+        }
+
+        for (let i = 0; i < devs.length; i++) {
+            let d = devs[i];
+            if (!d || d.type !== DeviceType.Wifi || !d.connected) continue;
+            let nets = (d.networks && d.networks.values) ? d.networks.values : [];
+            for (let j = 0; j < nets.length; j++) {
+                let n = nets[j];
+                if (n && n.connected) {
+                    let sig = n.signalStrength <= 1.0 ? Math.round(n.signalStrength * 100) : Math.round(n.signalStrength);
+                    setWifiState(n.name || "wifi", sig);
+                    return;
+                }
+            }
+            setWifiState(d.name || "wifi", 80);
+            return;
+        }
+
+        setWifiState("disconnected", 0);
+    }
+
+    Connections {
+        target: Networking.devices || null
+        function onValuesChanged() { root.syncNetwork() }
+    }
+
+    Repeater {
+        model: Networking.devices ? Networking.devices.values : []
+        Item {
+            required property var modelData
+            Connections {
+                target: modelData || null
+                function onConnectedChanged() { root.syncNetwork() }
+            }
+            Component.onCompleted: root.syncNetwork()
+        }
+    }
+
+    Component.onCompleted: {
+        syncUPower();
+        syncNetwork();
+    }
+
+    function setBatteryState(cap, stat) {
+        let clamped = Math.max(0, Math.min(100, cap));
+        root.batPresent = true;
+        root.batPct = clamped;
+        root.batStatus = stat;
+        root.batCap = `${clamped}%`;
+
+        if (stat === "Charging" || stat === "Full") {
+            let chg = ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"];
+            root.batIco = chg[Math.min(9, Math.floor(clamped / 10))];
+            return;
+        }
+
+        let icons = ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"];
+        root.batIco = icons[Math.min(9, Math.floor(clamped / 10))];
+    }
+
+    function setWifiState(ssid, sig) {
+        let clean = String(ssid || "").trim();
+        if (!clean || clean === "disconnected" || sig <= 0) {
+            root.netIcon = "󰤭";
+            root.netName = "disconnected";
+            root.netTxt = "󰤭   disconnected";
+            return;
+        }
+
+        let ico = "󰤟";
+        if (sig >= 75) ico = "󰤨";
+        else if (sig >= 50) ico = "󰤥";
+        else if (sig >= 25) ico = "󰤢";
+
+        root.netIcon = ico;
+        root.netName = clean;
+        root.netTxt = `${ico}   ${clean}`;
+    }
+
+    function refreshUpdates() {
+        if (!updProc.running) updProc.running = true;
+    }
 
     Process {
-        id: updateProc
+        id: updProc
         command: ["bash", "-c", "$HOME/.config/quickshell/scripts/check_updates.sh"]
         running: true
         stdout: SplitParser {
-            onRead: data => {
-                let p = data.trim().split(":");
-                if (p.length >= 6) {
-                    root.updatesArch = parseInt(p[0]) || 0;
-                    root.totalArch = parseInt(p[1]) || 1;
-                    root.updatesAur = parseInt(p[2]) || 0;
-                    root.totalAur = parseInt(p[3]) || 1;
-                    root.updatesFlatpak = parseInt(p[4]) || 0;
-                    root.totalFlatpak = parseInt(p[5]) || 1;
-                }
+            onRead: d => {
+                let p = d.trim().split(":");
+                if (p.length < 6) return;
+
+                root.updArch = parseInt(p[0]) || 0;
+                root.totArch = parseInt(p[1]) || 1;
+                root.updAur = parseInt(p[2]) || 0;
+                root.totAur = parseInt(p[3]) || 1;
+                root.updFlatpak = parseInt(p[4]) || 0;
+                root.totFlatpak = parseInt(p[5]) || 1;
             }
         }
     }
@@ -83,61 +242,6 @@ Item {
         interval: 1800000
         running: true
         repeat: true
-        onTriggered: updateProc.running = true
-    }
-
-    Process {
-        id: batProc
-        command: [
-            "bash", "-c",
-            "echo $(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1):$(cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1)"
-        ]
-        running: true
-        stdout: SplitParser {
-            onRead: data => {
-                let line = data.trim();
-                if (!line.includes(":")) return;
-                let parts = line.split(":");
-                let cap = parseInt(parts[0]) || 0;
-                let status = parts[1] || "";
-
-                root.batCapacity = `${cap}%`;
-                if (status === "Charging") {
-                    root.batIcon = "󰂄";
-                } else {
-                    let icons = ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"];
-                    let idx = Math.min(9, Math.max(0, Math.floor(cap / 10)));
-                    root.batIcon = icons[idx];
-                }
-            }
-        }
-    }
-
-    Timer {
-        interval: 30000
-        running: true
-        repeat: true
-        onTriggered: batProc.running = true
-    }
-
-    Process {
-        id: netProc
-        command: [
-            "bash", "-c",
-            "iface=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $5; exit}'); if [ -z \"$iface\" ]; then echo '󰤭   disconnected'; elif [[ \"$iface\" == wl* ]]; then ssid=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes' | cut -d: -f2); echo \"󰤨   ${ssid:-wifi}\"; else ipcidr=$(ip -4 addr show \"$iface\" 2>/dev/null | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}/\\d+'); echo \"󰈀   ${ipcidr:-ethernet}\"; fi"
-        ]
-        running: true
-        stdout: SplitParser {
-            onRead: out => {
-                if (out.trim().length > 0) root.netText = out.trim();
-            }
-        }
-    }
-
-    Timer {
-        interval: 12000
-        running: true
-        repeat: true
-        onTriggered: netProc.running = true
+        onTriggered: root.refreshUpdates()
     }
 }

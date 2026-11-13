@@ -1,11 +1,11 @@
+//@ pragma UseQApplication
+//@ pragma Env QT_LOGGING_RULES=qt.qpa.services.warning=false
 // Quickshell application entry point.
-// Instantiates multi-screen variants, registers notification servers, and exposes IPC command targets.
+// Instantiates multi-screen variants, coordinates drawer state, and exposes IPC command targets.
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import Quickshell.Services.Notifications
 import "./services"
 import "./modules/bar"
 import "./modules/controlcenter"
@@ -15,108 +15,37 @@ import "./modules/osd"
 Scope {
     id: shellRoot
 
-    ListModel { id: notifHistoryModel }
-    ListModel { id: popupToastModel }
-
-    // [ANCHOR:TARGET_SCREEN_STATE]
-    property string activePanelScreen: (Quickshell.screens.length > 0 && Quickshell.screens[0].name) ? Quickshell.screens[0].name : "eDP-1"
-    property string previousPanelScreen: activePanelScreen
+    property string actScr: (Quickshell.screens.length > 0 && Quickshell.screens[0].name) ? Quickshell.screens[0].name : "eDP-1"
+    property string prevScr: actScr
     property bool panelOpen: false
 
     onPanelOpenChanged: {
-        if (panelOpen) {
-            popupToastModel.clear();
-        }
+        NotificationState.panelOpen = panelOpen;
     }
 
-    // [ANCHOR:DISMISS_ON_WINDOW_FOCUS]
-    readonly property var activeWindow: CompositorAdapter.activeToplevel
-    property string lastActiveWindowAddress: ""
-    onActiveWindowChanged: {
-        if (!activeWindow) return;
-        let addr = activeWindow.address || "";
-        if (panelOpen && lastActiveWindowAddress !== "" && addr !== lastActiveWindowAddress) {
-            panelOpen = false;
-        }
-        lastActiveWindowAddress = addr;
+    Connections {
+        target: NotificationState
+        function onToggleRequested() { shellRoot.togglePanel(); }
     }
 
-    // [ANCHOR:MONITOR_TRACKING]
-    readonly property string focusedMon: CompositorAdapter.focusedMonitorName
-    onFocusedMonChanged: {
-        if (panelOpen && focusedMon !== "" && focusedMon !== activePanelScreen) {
-            previousPanelScreen = activePanelScreen;
-            activePanelScreen = focusedMon;
-        }
+    readonly property var actWin: CompositorAdapter.activeTop
+    property string lastWinAddr: ""
+
+    onActWinChanged: {
+        if (!actWin) return;
+        let addr = actWin.address || "";
+        if (panelOpen && lastWinAddr !== "" && addr !== lastWinAddr) panelOpen = false;
+        lastWinAddr = addr;
     }
 
-    property NotificationServer server: NotificationServer {
-        id: notifServer
+    readonly property string focMon: CompositorAdapter.focusMon
 
-        onNotification: notif => {
-            let app = notif.appName || "System";
-            let sum = notif.summary || "Notification";
-            let body = notif.body || "";
-            let timeStr = Qt.formatTime(new Date(), "h:mm:ss AP");
-
-            let actList = [];
-            if (notif.actions) {
-                for (let i = 0; i < notif.actions.length; i++) {
-                    let a = notif.actions[i];
-                    actList.push({
-                        actionId: a.id || a.identifier || ("act_" + i),
-                                 text: a.text || a.label || "Action",
-                                 actionObj: a
-                    });
-                }
-            }
-
-            if (notifHistoryModel.count > 0) {
-                let first = notifHistoryModel.get(0);
-                if (first.appName === app && (first.summary === sum || app === "blueman" || app === "Bluetooth")) {
-                    let newCount = (first.repeatCount || 1) + 1;
-
-                    let tree = [];
-                    try {
-                        tree = JSON.parse(first.historyTree || "[]");
-                    } catch(e) {
-                        tree = [];
-                    }
-                    if (tree.length === 0) {
-                        tree.push({ body: first.body, time: first.timestamp || timeStr });
-                    }
-                    tree.unshift({ body: body, time: timeStr });
-
-                    notifHistoryModel.setProperty(0, "repeatCount", newCount);
-                    notifHistoryModel.setProperty(0, "body", body);
-                    notifHistoryModel.setProperty(0, "historyTree", JSON.stringify(tree));
-                    return;
-                }
-            }
-
-            let initialTree = [{ body: body, time: timeStr }];
-
-            let item = {
-                id: notif.id,
-                summary: sum,
-                body: body,
-                appName: app,
-                timestamp: timeStr,
-                urgency: notif.urgency ? String(notif.urgency) : "normal",
-                repeatCount: 1,
-                historyTree: JSON.stringify(initialTree),
-                actions: actList
-            };
-
-            notifHistoryModel.insert(0, item);
-
-            if (!shellRoot.panelOpen) {
-                popupToastModel.insert(0, item);
-            }
-        }
+    onFocMonChanged: {
+        if (!panelOpen || focMon === "" || focMon === actScr) return;
+        prevScr = actScr;
+        actScr = focMon;
     }
 
-    // [ANCHOR:SCREEN_VARIANTS]
     Variants {
         model: Quickshell.screens
         delegate: BarWindow {
@@ -130,16 +59,16 @@ Scope {
         delegate: ControlCenterWindow {
             required property var modelData
             screen: modelData
-            historyModel: notifHistoryModel
-            isTargetScreen: shellRoot.panelOpen && (modelData !== null && modelData.name === shellRoot.activePanelScreen)
+            historyModel: NotificationState.histModel
+            isTargetScreen: shellRoot.panelOpen && (modelData !== null && modelData.name === shellRoot.actScr)
             isAnyPanelOpen: shellRoot.panelOpen
-            activeScreenName: shellRoot.activePanelScreen
-            previousScreenName: shellRoot.previousPanelScreen
+            activeScreenName: shellRoot.actScr
+            previousScreenName: shellRoot.prevScr
             onRequestClose: shellRoot.panelOpen = false
             onTriggerOpenOnThisScreen: {
                 if (modelData && modelData.name) {
-                    shellRoot.previousPanelScreen = shellRoot.activePanelScreen;
-                    shellRoot.activePanelScreen = modelData.name;
+                    shellRoot.prevScr = shellRoot.actScr;
+                    shellRoot.actScr = modelData.name;
                 }
                 shellRoot.panelOpen = true;
             }
@@ -151,7 +80,7 @@ Scope {
         delegate: NotificationToast {
             required property var modelData
             screen: modelData
-            model: popupToastModel
+            model: NotificationState.toastModel
         }
     }
 
@@ -163,38 +92,26 @@ Scope {
         }
     }
 
-    // [ANCHOR:GLOBAL_IPC]
     IpcHandler {
         target: "drawer"
-        function toggle() {
-            if (!shellRoot.panelOpen) {
-                let target = CompositorAdapter.focusedMonitorName;
-                if (!target && Quickshell.screens.length > 0) target = Quickshell.screens[0].name;
-                shellRoot.previousPanelScreen = shellRoot.activePanelScreen ? shellRoot.activePanelScreen : target;
-                shellRoot.activePanelScreen = target;
-                shellRoot.panelOpen = true;
-            } else {
-                shellRoot.panelOpen = false;
-            }
-        }
+        function toggle() { shellRoot.togglePanel(); }
         function open() {
-            let target = CompositorAdapter.focusedMonitorName;
-            if (!target && Quickshell.screens.length > 0) target = Quickshell.screens[0].name;
-            shellRoot.previousPanelScreen = shellRoot.activePanelScreen ? shellRoot.activePanelScreen : target;
-            shellRoot.activePanelScreen = target;
+            let tgt = CompositorAdapter.focusMon;
+            if (!tgt && Quickshell.screens.length > 0) tgt = Quickshell.screens[0].name;
+            shellRoot.prevScr = shellRoot.actScr ? shellRoot.actScr : tgt;
+            shellRoot.actScr = tgt;
             shellRoot.panelOpen = true;
         }
-        function close() {
-            shellRoot.panelOpen = false;
-        }
+        function close() { shellRoot.panelOpen = false; }
     }
 
     IpcHandler {
         target: "osd"
         function show(jsonStr: string) {
             try {
-                let data = JSON.parse(jsonStr);
-                HardwareState.triggerOsd(data.type || "volume", data.value || 0.5, data.icon || "󰕾", !!data.muted);
+                let d = JSON.parse(jsonStr);
+                let val = d.value !== undefined ? d.value : 0.5;
+                HardwareState.osdTriggered(d.type || "volume", val, d.icon || HardwareState.volumeIcon, !!d.muted);
             } catch (err) {
                 console.warn("[OSD] Parse error:", err);
             }
@@ -202,21 +119,29 @@ Scope {
     }
 
     IpcHandler {
+        target: "dnd"
+        function toggle() { NotificationState.toggleDnd(); }
+        function on() { NotificationState.dnd = true; }
+        function off() { NotificationState.dnd = false; }
+    }
+
+    IpcHandler {
+        target: "updates"
+        function refresh() { SystemState.refreshUpdates(); }
+    }
+
+    IpcHandler {
         target: "theme"
-        function reload() {
-            Quickshell.reload("");
-        }
+        function reload() { Quickshell.reload(""); }
     }
 
     function togglePanel() {
-        if (!shellRoot.panelOpen) {
-            let target = CompositorAdapter.focusedMonitorName;
-            if (!target && Quickshell.screens.length > 0) target = Quickshell.screens[0].name;
-            shellRoot.previousPanelScreen = shellRoot.activePanelScreen ? shellRoot.activePanelScreen : target;
-            shellRoot.activePanelScreen = target;
-            shellRoot.panelOpen = true;
-        } else {
-            shellRoot.panelOpen = false;
-        }
+        if (shellRoot.panelOpen) return shellRoot.panelOpen = false;
+
+        let tgt = CompositorAdapter.focusMon;
+        if (!tgt && Quickshell.screens.length > 0) tgt = Quickshell.screens[0].name;
+        shellRoot.prevScr = shellRoot.actScr ? shellRoot.actScr : tgt;
+        shellRoot.actScr = tgt;
+        shellRoot.panelOpen = true;
     }
 }

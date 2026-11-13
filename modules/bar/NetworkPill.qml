@@ -1,5 +1,5 @@
 // Status bar network status module.
-// Parses active connection SSID and opens nmtui terminal utility on click.
+// Displays Wi-Fi signal or Ethernet icon and opens nmtui on click.
 
 import QtQuick
 import "../../config"
@@ -11,17 +11,18 @@ Pill {
 
     onClicked: HardwareState.runCmd("kitty --class quickshell_nmtui -e nmtui")
 
-    readonly property var netParts: SystemState.netText.trim().split(/\s+/)
-    readonly property string netIcon: netParts.length > 0 ? netParts[0] : "󰤨"
-    readonly property string netName: netParts.length > 1 ? netParts.slice(1).join(" ") : ""
+    readonly property bool isDisconnected: SystemState.netName === "disconnected"
+    readonly property color netColor: isDisconnected ? Theme.error : Theme.primary
 
     Pill.Icon {
-        text: root.netIcon
+        text: SystemState.netIcon
+        color: root.netColor
         scaleFactor: root.scaleFactor
     }
 
     Pill.Label {
-        text: root.netName
+        text: SystemState.netName
+        color: root.netColor
         visible: text.length > 0
         scaleFactor: root.scaleFactor
     }

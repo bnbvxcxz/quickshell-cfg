@@ -1,5 +1,5 @@
 // MPRIS media player aggregator singleton.
-// Manages player discovery, track metadata sanitation, artwork resolution, and playback controls.
+// Tracks all exposed sockets, prioritizes the most recently active player, and manages playback controls.
 
 pragma Singleton
 import QtQuick
@@ -9,19 +9,24 @@ import Quickshell.Services.Mpris
 Item {
     id: root
 
-    property string pinnedPlayerId: ""
+    property string pinId: ""
+    property var activeOrder: ([])
     property int trackPos: 0
     property int trackLen: 0
+
 
     function isIgnored(p) {
         if (!p) return true;
         let id = String((p.identity || "") + " " + (p.desktopEntry || "")).toLowerCase();
-        return id.includes("firefox") ||
-        id.includes("waterfox") ||
-        id.includes("chromium") ||
-        id.includes("chrome") ||
-        id.includes("brave") ||
-        id.includes("discord");
+        if (id.includes("discord") || id.includes("waterfox")) return true;
+
+        let url = (p.metadata && p.metadata["xesam:url"]) ? String(p.metadata["xesam:url"]).toLowerCase() : "";
+        let meta = String((p.trackTitle || "") + " " + (p.trackArtist || "") + " " + (p.trackAlbum || "")).toLowerCase();
+        const hosts = ["twitter.com", "x.com", "tiktok.com", "instagram.com", "facebook.com", "threads.net", "bsky.app", "reddit.com", "snapchat.com"];
+        for (let i = 0; i < hosts.length; i++) {
+            if (url.includes(hosts[i]) || meta.includes(hosts[i])) return true;
+        }
+        return /\b(tiktok|twitter|instagram)\b/.test(id) || /\b(on x|on twitter|on tiktok)\b/.test(meta);
     }
 
     function hasValidTrack(p) {
@@ -30,28 +35,99 @@ Item {
         return t.length > 0 && p.playbackState !== MprisPlaybackState.Stopped;
     }
 
-    readonly property var activePlayer: {
-        if (!Mpris.players || Mpris.players.values.length === 0) return null;
-        let list = Mpris.players.values;
-
-        for (let i = 0; i < list.length; i++) {
-            let p = list[i];
-            if (!isIgnored(p) && hasValidTrack(p) && p.playbackState === MprisPlaybackState.Playing) return p;
+    function promotePlayer(id) {
+        let key = String(id || "").trim();
+        if (!key) return;
+        let next = [key];
+        for (let i = 0; i < activeOrder.length; i++) {
+            if (activeOrder[i] !== key) next.push(activeOrder[i]);
         }
+        activeOrder = next;
+        pinId = key;
+    }
 
-        if (root.pinnedPlayerId !== "") {
-            for (let i = 0; i < list.length; i++) {
-                let p = list[i];
-                if (!isIgnored(p) && p.identity === root.pinnedPlayerId && hasValidTrack(p)) return p;
+    function selectPlayer(id) {
+        promotePlayer(id);
+        syncTimers();
+    }
+
+    readonly property var validPlayers: {
+        if (!Mpris.players || !Mpris.players.values) return [];
+        let vals = Mpris.players.values;
+        let res = [];
+        for (let i = 0; i < vals.length; i++) {
+            if (!isIgnored(vals[i]) && hasValidTrack(vals[i])) res.push(vals[i]);
+        }
+        return res;
+    }
+
+    // Watch all non-ignored sockets so the latest player to start or change tracks takes priority.
+    Repeater {
+        model: Mpris.players ? Mpris.players.values : []
+
+        Item {
+            required property var modelData
+            readonly property string pId: (modelData && modelData.identity) ? modelData.identity : ""
+
+            Connections {
+                target: modelData || null
+                function onPlaybackStateChanged() {
+                    if (!modelData || root.isIgnored(modelData)) return;
+                    if (modelData.playbackState === MprisPlaybackState.Playing) {
+                        root.promotePlayer(pId);
+                        return;
+                    }
+                    // When the pinned player pauses or stops, yield focus to any other playing socket.
+                    if (root.pinId === pId) {
+                        let vals = root.validPlayers;
+                        for (let i = 0; i < vals.length; i++) {
+                            if (vals[i].identity !== pId && vals[i].playbackState === MprisPlaybackState.Playing) {
+                                root.promotePlayer(vals[i].identity);
+                                return;
+                            }
+                        }
+                    }
+                }
+                function onTrackTitleChanged() {
+                    if (!modelData || root.isIgnored(modelData)) {
+                        if (root.pinId === pId) root.pinId = "";
+                    }
+                }
+            }
+
+            Component.onCompleted: {
+                if (modelData && !root.isIgnored(modelData) && modelData.playbackState === MprisPlaybackState.Playing) {
+                    root.promotePlayer(pId);
+                }
+            }
+        }
+    }
+
+    readonly property var activePlayer: {
+        let vals = root.validPlayers;
+        if (vals.length === 0) return null;
+
+        // Respect the most recently active/pinned socket if it is still valid.
+        if (root.pinId !== "") {
+            for (let i = 0; i < vals.length; i++) {
+                if (vals[i].identity === root.pinId) return vals[i];
             }
         }
 
-        for (let i = 0; i < list.length; i++) {
-            let p = list[i];
-            if (!isIgnored(p) && hasValidTrack(p)) return p;
+        // Fall back to the most recent playing socket in activeOrder.
+        for (let j = 0; j < root.activeOrder.length; j++) {
+            let id = root.activeOrder[j];
+            for (let i = 0; i < vals.length; i++) {
+                if (vals[i].identity === id && vals[i].playbackState === MprisPlaybackState.Playing) return vals[i];
+            }
         }
 
-        return null;
+        // Any currently playing socket, then first valid socket.
+        for (let i = 0; i < vals.length; i++) {
+            if (vals[i].playbackState === MprisPlaybackState.Playing) return vals[i];
+        }
+
+        return vals[0];
     }
 
     readonly property bool hasMedia: activePlayer !== null && cleanTitle.length > 0
@@ -60,8 +136,7 @@ Item {
     function formatArtist(raw) {
         let str = String(raw || "").trim();
         if (str.length === 0) return "Media";
-        let lower = str.toLowerCase();
-        if (lower === "spotify") return "Spotify";
+        if (str.toLowerCase() === "spotify") return "Spotify";
         return str.replace(/\b\w/g, c => c.toUpperCase());
     }
 
@@ -73,19 +148,15 @@ Item {
 
     readonly property string cleanArtist: {
         if (!activePlayer) return "";
-        let artist = String(activePlayer.trackArtist || "").trim();
-        if (!artist && activePlayer.metadata) {
-            artist = String(activePlayer.metadata["xesam:albumArtist"] || activePlayer.metadata["xesam:artist"] || "").trim();
-        }
-        return formatArtist(artist ? artist : activePlayer.identity);
+        let a = String(activePlayer.trackArtist || "").trim();
+        if (!a && activePlayer.metadata) a = String(activePlayer.metadata["xesam:albumArtist"] || activePlayer.metadata["xesam:artist"] || "").trim();
+        return formatArtist(a ? a : activePlayer.identity);
     }
 
     readonly property string cleanAlbum: {
         if (!activePlayer) return "";
         let alb = String(activePlayer.trackAlbum || "").trim();
-        if (!alb && activePlayer.metadata) {
-            alb = String(activePlayer.metadata["xesam:album"] || "").trim();
-        }
+        if (!alb && activePlayer.metadata) alb = String(activePlayer.metadata["xesam:album"] || "").trim();
         return alb;
     }
 
@@ -94,38 +165,26 @@ Item {
         return cleanTitle + (cleanArtist ? (" - " + cleanArtist) : "");
     }
 
-    readonly property string compactDisplayString: {
-        if (!cleanTitle) return "No Media Active";
-        let str = cleanTitle;
-        if (cleanArtist) str += " • " + cleanArtist;
-        if (cleanAlbum && cleanAlbum !== cleanTitle) str += " [" + cleanAlbum + "]";
-        return str;
-    }
-
     readonly property string artSource: {
         if (!activePlayer) return "";
         let raw = "";
-        if (activePlayer.metadata) {
-            raw = activePlayer.metadata["mpris:artUrl"] || activePlayer.metadata["artUrl"] || "";
-        }
-        if (!raw) {
-            raw = activePlayer.trackArtUrl || activePlayer.artUrl || "";
-        }
+
+        if (activePlayer.metadata) raw = activePlayer.metadata["mpris:artUrl"] || activePlayer.metadata["artUrl"] || "";
+        if (!raw) raw = activePlayer.trackArtUrl || activePlayer.artUrl || "";
         if (!raw) return "";
 
         if (raw.indexOf("file://") === 0) {
             try { return decodeURIComponent(raw); } catch(e) { return raw; }
-        } else if (raw.indexOf("/") === 0) {
-            return "file://" + raw;
         }
+
+        if (raw.indexOf("/") === 0) return "file://" + raw;
         return raw;
     }
 
     function togglePlay() {
-        if (activePlayer) {
-            pinnedPlayerId = activePlayer.identity || "";
-            activePlayer.togglePlaying();
-        }
+        if (!activePlayer) return;
+        promotePlayer(activePlayer.identity || "");
+        activePlayer.togglePlaying();
     }
 
     function next() {
@@ -139,6 +198,7 @@ Item {
     function cycleLoop() {
         if (!activePlayer || !activePlayer.canControl) return;
         let cur = String(activePlayer.loopStatus || "None");
+
         if (cur.indexOf("None") !== -1 || cur === "0") activePlayer.loopStatus = "Playlist";
         else if (cur.indexOf("Playlist") !== -1 || cur === "1") activePlayer.loopStatus = "Track";
         else activePlayer.loopStatus = "None";
@@ -151,16 +211,14 @@ Item {
             return;
         }
 
-        let rawLen = 0;
-        if (activePlayer.metadata && activePlayer.metadata["mpris:length"]) {
-            rawLen = activePlayer.metadata["mpris:length"];
-        } else if (activePlayer.length) {
-            rawLen = activePlayer.length;
-        }
-        trackLen = rawLen > 100000 ? Math.floor(rawLen / 1000000) : Math.floor(rawLen);
+        let rLen = 0;
+        if (activePlayer.metadata && activePlayer.metadata["mpris:length"]) rLen = activePlayer.metadata["mpris:length"];
+        else if (activePlayer.length) rLen = activePlayer.length;
 
-        let rawPos = activePlayer.position || 0;
-        let sec = rawPos > 100000 ? Math.floor(rawPos / 1000000) : Math.floor(rawPos);
+        trackLen = rLen > 100000 ? Math.floor(rLen / 1000000) : Math.floor(rLen);
+
+        let rPos = activePlayer.position || 0;
+        let sec = rPos > 100000 ? Math.floor(rPos / 1000000) : Math.floor(rPos);
         trackPos = (sec > 0 && (trackLen === 0 || sec <= trackLen)) ? sec : 0;
     }
 
@@ -178,11 +236,8 @@ Item {
         running: root.isPlaying
         repeat: true
         onTriggered: {
-            if (root.trackLen > 0 && root.trackPos < root.trackLen) {
-                root.trackPos += 1;
-            } else {
-                root.syncTimers();
-            }
+            if (root.trackLen > 0 && root.trackPos < root.trackLen) return root.trackPos += 1;
+            root.syncTimers();
         }
     }
 

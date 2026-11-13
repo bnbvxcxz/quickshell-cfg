@@ -4,7 +4,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
+import "../services"
 import "."
 
 Item {
@@ -19,11 +19,11 @@ Item {
         let pxH = screenObj.height || (screenObj.geometry ? screenObj.geometry.height : 1080);
 
         let physW = (screenObj.physicalSize && screenObj.physicalSize.width > 0)
-        ? screenObj.physicalSize.width
-        : (pxW * 0.264583);
+            ? screenObj.physicalSize.width
+            : (pxW * 0.264583);
         let physH = (screenObj.physicalSize && screenObj.physicalSize.height > 0)
-        ? screenObj.physicalSize.height
-        : (pxH * 0.264583);
+            ? screenObj.physicalSize.height
+            : (pxH * 0.264583);
 
         let diagInches = Math.sqrt(Math.pow(physW, 2) + Math.pow(physH, 2)) / 25.4;
         if (diagInches <= 0 || isNaN(diagInches)) return 1.0;
@@ -37,13 +37,23 @@ Item {
         return Math.max(0.85, Math.min(2.4, Math.round(rawScale * 100) / 100));
     }
 
-    readonly property real currentScale: scaleFor(Hyprland.focusedMonitor)
+    readonly property real currentScale: {
+        let mon = CompositorAdapter.focusMon;
+        let screens = Quickshell.screens;
+        for (let i = 0; i < screens.length; i++) {
+            if (screens[i] && screens[i].name === mon) return scaleFor(screens[i]);
+        }
+        return screens.length > 0 ? scaleFor(screens[0]) : 1.0;
+    }
 
     readonly property int barHeight: Math.round(Theme.baseBarHeight * currentScale)
     readonly property int pillRadius: Math.round(barHeight / 2)
     readonly property int pillPadding: Math.round(Theme.basePillPadding * currentScale)
     readonly property int pillSpacing: Math.round(Theme.baseSpacing * currentScale)
     readonly property int trayIconSize: Math.max(16, Math.round(barHeight - (5 * currentScale)))
+
+    readonly property int padding: pillSpacing
+    readonly property int iconSize: trayIconSize
 
     readonly property int drawerWidth: Math.round(Theme.baseDrawerWidth * currentScale)
     readonly property int drawerHeight: Math.round(Theme.baseDrawerHeight * currentScale)

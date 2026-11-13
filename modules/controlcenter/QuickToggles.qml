@@ -1,5 +1,5 @@
 // Quick action toggle buttons.
-// Provides animated toggles for network, bluetooth, audio mute, and lock states.
+// Provides animated toggles for network, bluetooth, audio mute, DND, and lock states.
 
 import QtQuick
 import QtQuick.Layouts
@@ -12,39 +12,53 @@ RowLayout {
 
     property bool isCompact: false
     property real scaleFactor: 1.0
+    property bool wifiOn: true
+    property bool btOn: true
+
     spacing: Math.round(6 * scaleFactor)
 
-    function runCmd(cmd) {
-        if (!cmd) return;
-        cmdRunner.command = ["bash", "-c", cmd];
-        cmdRunner.running = true;
-    }
-
     Process {
-        id: cmdRunner
-        running: false
+        id: radioProbe
+        command: ["bash", "-c", "w=$(nmcli radio wifi 2>/dev/null); b=$(rfkill -n -o SOFT list bluetooth 2>/dev/null | head -n1); echo \"${w:-enabled}:${b:-unblocked}\""]
+        running: true
+        stdout: SplitParser {
+            onRead: line => {
+                let p = line.trim().split(":");
+                if (p.length >= 2) {
+                    root.wifiOn = (p[0].trim() === "enabled");
+                    root.btOn = (p[1].trim() === "unblocked");
+                }
+            }
+        }
     }
 
     Repeater {
         model: [
-            { icon: "󰤨", onCmd: "nmcli radio wifi on", offCmd: "nmcli radio wifi off", active: true },
-            { icon: "󰂯", onCmd: "rfkill unblock bluetooth", offCmd: "rfkill block bluetooth", active: true },
-            { icon: "󰕾", isMuteBtn: true },
-            { icon: "", onCmd: "hyprlock", offCmd: "", active: false }
+            { icon: "󰤨", onCmd: "nmcli radio wifi on", offCmd: "nmcli radio wifi off", kind: "wifi" },
+            { icon: "󰂯", onCmd: "rfkill unblock bluetooth", offCmd: "rfkill block bluetooth", kind: "bt" },
+            { icon: "󰕾", kind: "mute" },
+            { icon: "󰂛", kind: "dnd" },
+            { icon: "", onCmd: "hyprlock", kind: "lock" }
         ]
 
         Rectangle {
             id: btn
             required property var modelData
 
-            property bool toggled: modelData.isMuteBtn ? !HardwareState.isMuted : (modelData.active ?? false)
+            readonly property bool toggled: {
+                if (modelData.kind === "mute") return !HardwareState.isMuted;
+                if (modelData.kind === "dnd") return NotificationState.dnd;
+                if (modelData.kind === "wifi") return root.wifiOn;
+                if (modelData.kind === "bt") return root.btOn;
+                return false;
+            }
 
             Layout.fillWidth: true
             Layout.preferredHeight: root.isCompact ? Math.round(24 * root.scaleFactor) : Math.round(32 * root.scaleFactor)
             radius: Theme.cornerRadius
 
-            color: toggled ? Theme.primary : Qt.alpha(Theme.surface_container_high, 0.7)
-            border.color: toggled ? Theme.primary : Qt.alpha(Theme.outline_variant, 0.4)
+            color: toggled ? Theme.primary : Qt.alpha(Theme.surface_container_high, Theme.cardHighOpacity)
+            border.color: toggled ? Theme.primary : Qt.alpha(Theme.outline_variant, Theme.subtleOutlineOpacity)
             border.width: 1
 
             Behavior on Layout.preferredHeight {
@@ -54,7 +68,11 @@ RowLayout {
 
             Text {
                 anchors.centerIn: parent
-                text: btn.modelData.isMuteBtn ? (HardwareState.isMuted ? "󰖁" : "󰕾") : btn.modelData.icon
+                text: {
+                    if (btn.modelData.kind === "mute") return HardwareState.isMuted ? "󰖁" : "󰕾";
+                    if (btn.modelData.kind === "dnd") return NotificationState.dnd ? "󰂛" : "󰂚";
+                    return btn.modelData.icon;
+                }
                 color: btn.toggled ? Theme.on_primary : Theme.primary
                 font.family: Typography.family
                 font.pixelSize: root.isCompact ? Typography.sizeSmall(root.scaleFactor) : Typography.size(root.scaleFactor)
@@ -65,16 +83,18 @@ RowLayout {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    if (btn.modelData.icon === "") {
-                        root.runCmd(btn.modelData.onCmd);
-                        return;
+                    let k = btn.modelData.kind;
+                    if (k === "lock") return HardwareState.runCmd(btn.modelData.onCmd);
+                    if (k === "mute") return HardwareState.toggleMute(false);
+                    if (k === "dnd") return NotificationState.toggleDnd();
+                    if (k === "wifi") {
+                        root.wifiOn = !root.wifiOn;
+                        return HardwareState.runCmd(root.wifiOn ? btn.modelData.onCmd : btn.modelData.offCmd);
                     }
-                    if (btn.modelData.isMuteBtn) {
-                        HardwareState.toggleMute(false);
-                        return;
+                    if (k === "bt") {
+                        root.btOn = !root.btOn;
+                        return HardwareState.runCmd(root.btOn ? btn.modelData.onCmd : btn.modelData.offCmd);
                     }
-                    btn.toggled = !btn.toggled;
-                    root.runCmd(btn.toggled ? btn.modelData.onCmd : btn.modelData.offCmd);
                 }
             }
         }
