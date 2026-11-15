@@ -46,6 +46,7 @@ PanelWindow {
             root.isMute = m;
             root.act = true;
             hide.restart();
+            Logger.debug("OSD", `Triggered ${t} val=${val} muted=${m}`);
         }
     }
 

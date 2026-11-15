@@ -1,4 +1,5 @@
 module services
+singleton Logger 1.0 Logger.qml
 singleton CompositorAdapter 1.0 CompositorAdapter.qml
 singleton HardwareState 1.0 HardwareState.qml
 singleton MediaState 1.0 MediaState.qml

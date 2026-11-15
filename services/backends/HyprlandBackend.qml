@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import ".."
 
 Item {
     id: root
@@ -29,7 +30,7 @@ Item {
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
-                if (/configProvider:\s*lua/i.test(this.text)) root.useLuaDispatch = true;
+                if (/configProvider:\s*lua/i.test(this.text)) { root.useLuaDispatch = true; Logger.info("Hyprland", "Lua dispatch mode enabled"); }
             }
         }
     }

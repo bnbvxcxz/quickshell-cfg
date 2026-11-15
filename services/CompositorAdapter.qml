@@ -19,6 +19,7 @@ Item {
     }
 
     readonly property var backend: backendLoader.item
+    Component.onCompleted: Logger.info("Compositor", `Using ${compositor} backend`)
 
     readonly property int activeWsId: backend ? backend.activeWsId : 1
     readonly property string focusMon: backend ? backend.focusMon : ""

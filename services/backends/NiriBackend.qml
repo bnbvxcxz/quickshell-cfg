@@ -4,6 +4,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import ".."
 
 Item {
     id: root
@@ -62,7 +63,7 @@ Item {
                             break;
                         }
                     }
-                } catch(e) {}
+                } catch(e) { Logger.warn("Niri", "Event parse error: " + e); }
             }
         }
     }
@@ -126,6 +127,7 @@ Item {
 
         onConnectedChanged: {
             if (connected) {
+                Logger.info("Niri", "Connected to NIRI_SOCKET EventStream");
                 write("\"EventStream\"\n");
                 flush();
             }
