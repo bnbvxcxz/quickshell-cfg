@@ -3,40 +3,46 @@
 Yes, this is vibecoded shlock. But it's MY vibecoded shlock. :wholesome:
 
 ## Quick Start
-Launch shell directly:
 ```sh
 quickshell
 ```
 
-Run notification, markup, and bar pill test suites:
+With debug logging:
+```sh
+QUICKSHELL_LOG_LEVEL=debug quickshell
+```
+
+Run the notification and bar module tests:
 ```sh
 ./tests.sh
 ```
 
 ## Dependencies
-**Core**
-- `quickshell` (with Qt6 Wayland / `qt6-wayland`)
-- `hyprland` or `niri` (compositor backend selected automatically)
+Core:
+- `quickshell` (with `qt6-wayland`)
+- `hyprland` or `niri`
 - `pipewire` + `pipewire-pulse` (`pactl`, `wpctl`)
-- `brightnessctl` (backlight control)
-- `networkmanager` (`nmcli` for Wi-Fi status & `nmtui`)
-- A Nerd Font (default fallback: `ttf-jetbrains-mono-nerd`)
+- `brightnessctl`
+- `networkmanager` (`nmcli`, `nmtui`)
+- A Nerd Font (fallback: `JetBrainsMono NFP`)
 
-**Optional / Module-Specific**
-- `cava` (CLI binary required for `CavaPill`)
-- `matugen` (dynamic wallpaper color generation into `config/Theme.qml`)
-- `pavucontrol` (audio pill click target)
-- `kitty` (terminal launcher for `nmtui` and `update.sh`)
-- `pacman-contrib` (`checkupdates`), `yay`, `flatpak` (for `UpdatesPill` and `scripts/update.sh`)
+Optional:
+- `cava` (`MediaState` / `CavaModule`)
+- `matugen` (writes `config/Theme.qml`)
+- `pavucontrol` (audio module click)
+- `kitty` (`nmtui` and `scripts/update.sh`)
+- `pacman-contrib` (`checkupdates`), `yay`, `flatpak` (`UpdatesModule`)
 - `libnotify` (`notify-send` for `tests.sh`)
 
-## Customization
-- **Bar Layout (`modules/bar/BarWindow.qml`)**: Top-level bar configuration works like Waybar's module lists—add, remove, or reorder `*Pill` components inside `leftBarRow` or `rightBarRow` without touching backend services.
-- **Compositors (`services/CompositorAdapter.qml` + `services/backends/`)**: `CompositorAdapter.qml` acts as a stable ABI and uses a `Loader` to instantiate only the active compositor backend (`HyprlandBackend.qml` or `NiriBackend.qml`). Adding Sway, MangoWC, or River means dropping a new backend file into `services/backends/` that implements the same 5 properties and 4 methods.
-- **Theming & Shapes (`config/Theme.qml`)**: Matugen-ready color tokens, surface opacities (`barOpacity`, `drawerOpacity`, `cardOpacity`, `toastOpacity`), and module geometry (`pillRadius: -1` for capsules or `>= 0` for sharp boxes, `pillBorderWidth`, `pillBorderColor`).
-- **Animations (`components/SpringBehavior.qml`)**: Centralized spring stiffness/damping presets shared across bar entrance, workspace indicator, and drawer transitions.
-- **Docs**: See [docs/architecture.md](docs/architecture.md) and [docs/conventions.md](docs/conventions.md).
+## Customization & Features
+- **Theming & Layout (`config/Metrics.qml` + `config/Theme.qml`)**: `config/Metrics.qml` is the main place to tweak how the shell looks—`moduleRadius` (`-1` for pills, `0` for square boxes, `4+` for rounded boxes), `baseModuleGapX`, `baseModuleGapY`, `baseBarMarginX`, `baseModulePadding`, borders, and opacities. `config/Theme.qml` is just Material 3 colors so Matugen can overwrite it on wallpaper changes without touching your layout settings.
+- **Commands & Paths (`config/Commands.qml`)**: Centralizes `terminal`, `mixer`, and `Qt.resolvedUrl`-resolved script paths.
+- **Bar Modules (`modules/bar/BarWindow.qml`)**: Add, remove, or reorder `*Module` items in `leftBarRow` or `rightBarRow` like Waybar. `SystemTrayModule` supports left/right/middle click and 2nd-right-click popup close; `CavaModule` shares a single `cava` process from `MediaState` across all monitors; `MediaState` keeps idle MPRIS sockets visible until closed.
+- **Notifications (`components/NotificationCard.qml` + `services/NotificationState.qml`)**: Supports 2-per-row action buttons, action icons, inline replies, markup/hyperlinks, images, progress bars, grouped message history, per-card hover pause, and horizontal swipe-to-dismiss.
+- **Compositors (`services/CompositorAdapter.qml` + `services/backends/`)**: `CompositorAdapter` picks `HyprlandBackend.qml` or `NiriBackend.qml` automatically. Supporting another compositor just means dropping a new backend file in `services/backends/`.
+- **Animations & Logging**: Shared spring presets live in `components/SpringBehavior.qml`. `services/Logger.qml` provides `error`/`warn`/`info`/`debug` levels (switchable at runtime with `quickshell ipc call log level debug`).
+- **Docs**: [docs/architecture.md](docs/architecture.md), [docs/conventions.md](docs/conventions.md), [docs/roadmap.md](docs/roadmap.md).
 
-## Credits & Related Projects
-- Heavily inspired by and modeled after [Waybar](https://github.com/Alexays/Waybar) (module ergonomics, compositor IPC patterns, and audio visualizer ideas).
+## Credits
+- Modeled after [Waybar](https://github.com/Alexays/Waybar).
 - Built with [Quickshell](https://quickshell.org/), [Matugen](https://github.com/InioX/matugen), [Hyprland](https://hyprland.org/), [Niri](https://github.com/YaLTeR/niri), and [cava](https://github.com/karlstav/cava).
