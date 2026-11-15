@@ -1,8 +1,7 @@
 // Scrolling marquee text component.
-// Horizontally scrolls overflow text on timer when content exceeds boundary width.
+// Horizontally scrolls overflow text at a calm linear pace like an iPod and resets to start.
 
 import QtQuick
-import QtQuick.Layouts
 import "../config"
 
 Item {
@@ -15,12 +14,15 @@ Item {
     property bool italic: Typography.globalItalic
     property bool centerWhenFit: true
 
-    implicitWidth: textElement.implicitWidth
+    readonly property real textW: Math.ceil(textElement.paintedWidth > 0 ? textElement.paintedWidth : textElement.implicitWidth)
+    implicitWidth: textW
     implicitHeight: textElement.implicitHeight
     clip: true
 
-    readonly property bool overflows: textElement.implicitWidth > root.width
-    readonly property real overflowDistance: Math.max(0, textElement.implicitWidth - root.width)
+    readonly property bool overflows: textW > root.width
+    readonly property real overflowDistance: Math.max(0, textW - root.width)
+
+    onOverflowsChanged: { if (!overflows) scrollAnim.currentX = 0; }
 
     Text {
         id: textElement
@@ -32,8 +34,7 @@ Item {
         font.italic: root.italic
 
         anchors.verticalCenter: parent.verticalCenter
-        anchors.horizontalCenter: (!root.overflows && root.centerWhenFit) ? parent.horizontalCenter : undefined
-        x: (!root.overflows && !root.centerWhenFit) ? 0 : (root.overflows ? scrollAnim.currentX : 0)
+        x: root.overflows ? scrollAnim.currentX : (root.centerWhenFit ? Math.round((root.width - root.textW) / 2) : 0)
 
         Item {
             id: scrollAnim
@@ -41,21 +42,18 @@ Item {
 
             SequentialAnimation on currentX {
                 running: root.visible && root.overflows
-                onRunningChanged: { if (!running) scrollAnim.currentX = 0; }
                 loops: Animation.Infinite
+                onRunningChanged: { if (!running) scrollAnim.currentX = 0; }
 
-                PauseAnimation { duration: 1500 }
+                PauseAnimation { duration: 2000 }
                 NumberAnimation {
+                    from: 0
                     to: -root.overflowDistance
-                    duration: Math.max(1000, root.overflowDistance * 25)
-                    easing.type: Easing.InOutQuad
+                    duration: Math.max(2000, Math.round(root.overflowDistance * 42))
+                    easing.type: Easing.Linear
                 }
                 PauseAnimation { duration: 1500 }
-                NumberAnimation {
-                    to: 0
-                    duration: Math.max(1000, root.overflowDistance * 25)
-                    easing.type: Easing.InOutQuad
-                }
+                PropertyAction { value: 0 }
             }
         }
     }

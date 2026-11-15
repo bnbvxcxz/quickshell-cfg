@@ -134,6 +134,16 @@ Item {
 
     readonly property bool hasMedia: activePlayer !== null
     readonly property bool isPlaying: activePlayer !== null && activePlayer.playbackState === MprisPlaybackState.Playing
+    readonly property bool canShuffle: !!(activePlayer && activePlayer.shuffleSupported)
+    readonly property bool canLoop: !!(activePlayer && activePlayer.loopSupported)
+    readonly property bool isShuffled: !!(activePlayer && activePlayer.shuffle)
+    // 0: None, 1: Track (single), 2: Playlist
+    readonly property int loopMode: {
+        if (!activePlayer) return 0;
+        if (activePlayer.loopState === MprisLoopState.Track) return 1;
+        if (activePlayer.loopState === MprisLoopState.Playlist) return 2;
+        return 0;
+    }
 
     function formatArtist(raw) {
         let str = String(raw || "").trim();
@@ -198,13 +208,18 @@ Item {
         if (activePlayer && activePlayer.canGoPrevious) activePlayer.previous();
     }
 
-    function cycleLoop() {
-        if (!activePlayer || !activePlayer.canControl) return;
-        let cur = String(activePlayer.loopStatus || "None");
+    function toggleShuffle() {
+        if (!activePlayer || !activePlayer.canControl || !canShuffle) return;
+        activePlayer.shuffle = !activePlayer.shuffle;
+        Logger.debug("Media", `Shuffle -> ${activePlayer.shuffle}`);
+    }
 
-        if (cur.indexOf("None") !== -1 || cur === "0") activePlayer.loopStatus = "Playlist";
-        else if (cur.indexOf("Playlist") !== -1 || cur === "1") activePlayer.loopStatus = "Track";
-        else activePlayer.loopStatus = "None";
+    function cycleLoop() {
+        if (!activePlayer || !activePlayer.canControl || !canLoop) return;
+        if (activePlayer.loopState === MprisLoopState.None) activePlayer.loopState = MprisLoopState.Playlist;
+        else if (activePlayer.loopState === MprisLoopState.Playlist) activePlayer.loopState = MprisLoopState.Track;
+        else activePlayer.loopState = MprisLoopState.None;
+        Logger.debug("Media", `Loop -> ${activePlayer.loopState}`);
     }
 
     function syncTimers() {

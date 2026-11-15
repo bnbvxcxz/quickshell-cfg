@@ -71,15 +71,13 @@ RowLayout {
             centerWhenFit: false
         }
 
-        Text {
+        MarqueeText {
             Layout.fillWidth: true
+            Layout.preferredHeight: Math.round(16 * root.scaleFactor)
             text: MediaState.cleanArtist || ""
             color: Theme.on_surface_variant
-            font.family: Typography.family
-            font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            elide: Text.ElideRight
+            pixelSize: Typography.sizeSmall(root.scaleFactor)
+            centerWhenFit: false
         }
 
         Text {
@@ -112,7 +110,8 @@ RowLayout {
 
         Text {
             text: MediaState.isPlaying ? "󰏤" : "󰐊"
-            color: Theme.primary
+            color: MediaState.isPlaying ? Theme.primary : Theme.tertiary
+            Behavior on color { ColorAnimation { duration: 120 } }
             font.family: Typography.family
             font.pixelSize: Math.round(22 * root.scaleFactor)
             font.bold: Typography.globalBold

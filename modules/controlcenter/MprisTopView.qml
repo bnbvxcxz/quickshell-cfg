@@ -70,43 +70,36 @@ ColumnLayout {
         centerWhenFit: true
     }
 
-    RowLayout {
-        Layout.alignment: Qt.AlignHCenter
-        spacing: Math.round(6 * root.scaleFactor)
-
-        Text {
-            text: MediaState.cleanArtist || ""
-            color: Theme.on_surface_variant
-            font.family: Typography.family
-            font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            elide: Text.ElideRight
-        }
-
-        Text {
-            text: "•"
-            color: Theme.outline
-            font.family: Typography.family
-            font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-        }
-
-        Text {
-            text: MediaState.trackLen > 0 ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen)) : "--:--"
-            color: Theme.outline
-            font.family: Typography.family
-            font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-        }
+    MarqueeText {
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.round(16 * root.scaleFactor)
+        readonly property string timeStr: MediaState.trackLen > 0 ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen)) : "--:--"
+        text: MediaState.cleanArtist ? `${MediaState.cleanArtist}  •  ${timeStr}` : timeStr
+        color: Theme.on_surface_variant
+        pixelSize: Typography.sizeSmall(root.scaleFactor)
+        centerWhenFit: true
     }
 
     RowLayout {
         Layout.alignment: Qt.AlignHCenter
-        spacing: Math.round(24 * root.scaleFactor)
+        spacing: Math.round(20 * root.scaleFactor)
         Layout.bottomMargin: Math.round(2 * root.scaleFactor)
+
+        Text {
+            text: "󰒟"
+            opacity: MediaState.canShuffle ? 1.0 : 0.4
+            color: MediaState.isShuffled ? Theme.primary : Theme.outline
+            font.family: Typography.family
+            font.pixelSize: Math.round(15 * root.scaleFactor)
+            font.bold: Typography.globalBold
+            font.italic: Typography.globalItalic
+            Behavior on color { ColorAnimation { duration: 120 } }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: MediaState.toggleShuffle()
+            }
+        }
 
         Text {
             text: "󰒮"
@@ -124,11 +117,12 @@ ColumnLayout {
 
         Text {
             text: MediaState.isPlaying ? "󰏤" : "󰐊"
-            color: Theme.primary
+            color: MediaState.isPlaying ? Theme.primary : Theme.tertiary
             font.family: Typography.family
             font.pixelSize: Math.round(20 * root.scaleFactor)
             font.bold: Typography.globalBold
             font.italic: Typography.globalItalic
+            Behavior on color { ColorAnimation { duration: 120 } }
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
@@ -151,13 +145,14 @@ ColumnLayout {
         }
 
         Text {
-            property string loopVal: (MediaState.activePlayer && MediaState.activePlayer.loopStatus) ? String(MediaState.activePlayer.loopStatus) : "None"
-            text: (loopVal.indexOf("Track") !== -1) ? "󰑘" : "󰑖"
-            color: (loopVal !== "None" && loopVal !== "0") ? Theme.primary : Theme.outline
+            text: MediaState.loopMode === 1 ? "󰑘" : "󰑖"
+            opacity: MediaState.canLoop ? 1.0 : 0.4
+            color: MediaState.loopMode === 1 ? Theme.tertiary : (MediaState.loopMode === 2 ? Theme.primary : Theme.outline)
             font.family: Typography.family
             font.pixelSize: Math.round(15 * root.scaleFactor)
             font.bold: Typography.globalBold
             font.italic: Typography.globalItalic
+            Behavior on color { ColorAnimation { duration: 120 } }
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
