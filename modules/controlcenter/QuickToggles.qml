@@ -1,5 +1,5 @@
 // Quick action toggle buttons.
-// Provides animated toggles for network, bluetooth, audio mute, DND, and lock states.
+// Provides animated toggles for network, bluetooth, audio mute, DND, and DND states.
 
 import QtQuick
 import QtQuick.Layouts
@@ -37,8 +37,7 @@ RowLayout {
             { icon: "󰤨", onCmd: "nmcli radio wifi on", offCmd: "nmcli radio wifi off", kind: "wifi" },
             { icon: "󰂯", onCmd: "rfkill unblock bluetooth", offCmd: "rfkill block bluetooth", kind: "bt" },
             { icon: "󰕾", kind: "mute" },
-            { icon: "󰂛", kind: "dnd" },
-            { icon: "", onCmd: "hyprlock", kind: "lock" }
+            { icon: "󰂛", kind: "dnd" }
         ]
 
         Rectangle {
@@ -55,10 +54,10 @@ RowLayout {
 
             Layout.fillWidth: true
             Layout.preferredHeight: root.isCompact ? Math.round(24 * root.scaleFactor) : Math.round(32 * root.scaleFactor)
-            radius: Theme.cornerRadius
+            radius: Metrics.cornerRadius
 
-            color: toggled ? Theme.primary : Qt.alpha(Theme.surface_container_high, Theme.cardHighOpacity)
-            border.color: toggled ? Theme.primary : Qt.alpha(Theme.outline_variant, Theme.subtleOutlineOpacity)
+            color: toggled ? Theme.primary : Qt.alpha(Theme.surface_container_high, Metrics.cardHighOpacity)
+            border.color: toggled ? Theme.primary : Qt.alpha(Theme.outline_variant, Metrics.subtleOutlineOpacity)
             border.width: 1
 
             Behavior on Layout.preferredHeight {
@@ -84,15 +83,16 @@ RowLayout {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     let k = btn.modelData.kind;
-                    if (k === "lock") return HardwareState.runCmd(btn.modelData.onCmd);
-                    if (k === "mute") return HardwareState.toggleMute(false);
-                    if (k === "dnd") return NotificationState.toggleDnd();
+                    if (k === "mute") { Logger.debug("QuickToggles", "Toggled mute"); return HardwareState.toggleMute(false); }
+                    if (k === "dnd") { NotificationState.toggleDnd(); Logger.debug("QuickToggles", `Toggled DND=${NotificationState.dnd}`); return; }
                     if (k === "wifi") {
                         root.wifiOn = !root.wifiOn;
+                        Logger.debug("QuickToggles", `Toggled Wi-Fi=${root.wifiOn}`);
                         return HardwareState.runCmd(root.wifiOn ? btn.modelData.onCmd : btn.modelData.offCmd);
                     }
                     if (k === "bt") {
                         root.btOn = !root.btOn;
+                        Logger.debug("QuickToggles", `Toggled Bluetooth=${root.btOn}`);
                         return HardwareState.runCmd(root.btOn ? btn.modelData.onCmd : btn.modelData.offCmd);
                     }
                 }

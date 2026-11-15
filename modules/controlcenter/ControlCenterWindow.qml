@@ -24,10 +24,10 @@ PanelWindow {
     property bool isExpandedMode: false
 
     readonly property real s: Metrics.scaleFor(root.screen)
-    readonly property real drawerWidth: Metrics.scaled(Theme.baseDrawerWidth, s)
-    readonly property real drawerHeight: Metrics.scaled(Theme.baseDrawerHeight, s)
+    readonly property real drawerWidth: Metrics.scaled(Metrics.baseDrawerWidth, s)
+    readonly property real drawerHeight: Metrics.scaled(Metrics.baseDrawerHeight, s)
     readonly property real baseMargin: Metrics.scaled(8, s)
-    readonly property real topMargin: Metrics.scaled(26, s)
+    readonly property real topMargin: Metrics.scaled(Metrics.baseBarHeight + 4, s)
 
     readonly property int screenMode: CompositorAdapter.resolveMode(root.screen ? root.screen.name : "")
     readonly property int activeScreenMode: CompositorAdapter.resolveMode(activeScreenName)
@@ -35,7 +35,7 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-control-center"
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (root.isTargetScreen && NotificationState.hasInlineReply) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
     anchors {
@@ -116,6 +116,7 @@ PanelWindow {
     }
 
     onIsTargetScreenChanged: {
+        Logger.debug("ControlCenter", `${root.screen ? root.screen.name : "?"} target=${isTargetScreen} mode=${screenMode}`);
         stopAllAnimations();
 
         if (!isTargetScreen) {
@@ -134,23 +135,26 @@ PanelWindow {
             return animSlideOut.start();
         }
 
+        let wasVisible = root.visible;
         root.visible = true;
 
         if (screenMode === 2) {
             root.margins.left = root.baseMargin;
-            root.margins.top = -root.drawerHeight - root.topMargin;
+            if (!wasVisible) root.margins.top = -root.drawerHeight - root.topMargin;
             return animDrop.start();
         }
 
         if (screenMode === 0 && previousScreenName !== "" && previousScreenName !== (root.screen ? root.screen.name : "") && prevScreenMode === 2) {
             root.margins.right = root.baseMargin;
-            root.margins.top = -root.drawerHeight - root.topMargin;
+            if (!wasVisible) root.margins.top = -root.drawerHeight - root.topMargin;
             return animDrop.start();
         }
 
         root.margins.top = root.topMargin;
-        if (screenMode === 0) root.margins.right = -root.drawerWidth - root.baseMargin;
-        else root.margins.left = -root.drawerWidth - root.baseMargin;
+        if (!wasVisible) {
+            if (screenMode === 0) root.margins.right = -root.drawerWidth - root.baseMargin;
+            else root.margins.left = -root.drawerWidth - root.baseMargin;
+        }
 
         animSlideIn.start();
     }
@@ -158,8 +162,8 @@ PanelWindow {
     Rectangle {
         id: panelBox
         anchors.fill: parent
-        radius: Theme.cornerRadius
-        color: Qt.alpha(Theme.background, Theme.drawerOpacity)
+        radius: Metrics.cornerRadius
+        color: Qt.alpha(Theme.background, Metrics.drawerOpacity)
         border.color: Qt.alpha(Theme.outline_variant, 0.8)
         border.width: 1
 
@@ -180,7 +184,8 @@ PanelWindow {
             id: contentLoader
             anchors.fill: parent
             anchors.margins: Math.round(10 * root.s)
-            active: root.visible
+            active: true
+            asynchronous: true
 
             sourceComponent: ColumnLayout {
                 spacing: root.isExpandedMode ? Math.round(4 * root.s) : Math.round(8 * root.s)

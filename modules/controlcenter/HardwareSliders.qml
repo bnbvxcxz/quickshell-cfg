@@ -1,10 +1,10 @@
 // Audio and backlight slider controls.
-// Handles interactive volume and brightness dragging, scrolling, and compact collapse.
+// Composes SliderRow instances for volume and brightness with compact collapse.
 
 import QtQuick
 import QtQuick.Layouts
-import "../../config"
 import "../../services"
+import "../../components"
 
 Item {
     id: root
@@ -31,204 +31,29 @@ Item {
         anchors.right: parent.right
         spacing: Math.round(6 * root.scaleFactor)
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: root.sliderHeight
-            radius: Theme.cornerRadius
-            color: Qt.alpha(Theme.surface_container_high, Theme.cardHighOpacity)
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Math.round(10 * root.scaleFactor)
-                anchors.rightMargin: Math.round(10 * root.scaleFactor)
-                spacing: Math.round(8 * root.scaleFactor)
-
-                Text {
-                    text: HardwareState.volumeIcon
-                    color: HardwareState.isMuted ? Theme.error : Theme.primary
-                    font.family: Typography.family
-                    font.pixelSize: Typography.size(root.scaleFactor)
-                    font.bold: Typography.globalBold
-                    font.weight: Typography.globalWeight
-                    font.italic: Typography.globalItalic
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: HardwareState.toggleMute(false)
-                    }
-                }
-
-                Item {
-                    id: volTrackBox
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Math.round(18 * root.scaleFactor)
-
-                    Rectangle {
-                        id: volTrack
-                        anchors.centerIn: parent
-                        width: parent.width
-                        height: Math.max(4, Math.round(6 * root.scaleFactor))
-                        radius: height / 2
-                        color: Theme.surface_container_lowest
-
-                        Rectangle {
-                            width: volTrack.width * Math.max(0.0, Math.min(1.0, HardwareState.volume))
-                            height: parent.height
-                            radius: height / 2
-                            color: HardwareState.isMuted ? Theme.outline : Theme.primary
-                        }
-                    }
-
-                    Rectangle {
-                        readonly property real knobDim: Math.round(12 * root.scaleFactor)
-                        x: Math.max(0, Math.min(volTrackBox.width - width, (volTrackBox.width * HardwareState.volume) - (width / 2)))
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: knobDim
-                        height: knobDim
-                        radius: knobDim / 2
-                        color: HardwareState.isMuted ? Theme.outline : Theme.primary
-                        border.color: Theme.background
-                        border.width: 1.5
-                    }
-                }
-
-                Text {
-                    text: HardwareState.isMuted ? "MUTE" : `${Math.round(HardwareState.volume * 100)}%`
-                    color: HardwareState.isMuted ? Theme.error : Theme.on_surface_variant
-                    font.family: Typography.family
-                    font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                    font.bold: Typography.globalBold
-                    font.weight: Typography.globalWeight
-                    font.italic: Typography.globalItalic
-                    Layout.preferredWidth: Math.round(38 * root.scaleFactor)
-                    horizontalAlignment: Text.AlignRight
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                preventStealing: true
-                property int scrollAcc: 0
-
-                function setFromX(mx) {
-                    let pad = Math.round(32 * root.scaleFactor);
-                    let w = Math.max(1, width - Math.round(78 * root.scaleFactor));
-                    let pct = Math.max(0.0, Math.min(1.0, (mx - pad) / w));
-                    HardwareState.setVolumePercent(pct, false);
-                }
-
-                onClicked: mouse => setFromX(mouse.x)
-                onPositionChanged: mouse => { if (pressed) setFromX(mouse.x); }
-
-                onWheel: wheel => {
-                    scrollAcc += wheel.angleDelta.y;
-                    let steps = Math.trunc(scrollAcc / 120);
-                    if (steps !== 0) {
-                        HardwareState.adjustVolume(steps, false);
-                        scrollAcc -= steps * 120;
-                    }
-                    wheel.accepted = true;
-                }
-            }
+        SliderRow {
+            icon: HardwareState.volumeIcon
+            value: HardwareState.volume
+            label: HardwareState.isMuted ? "MUTE" : `${Math.round(HardwareState.volume * 100)}%`
+            muted: HardwareState.isMuted
+            minValue: 0.0
+            scaleFactor: root.scaleFactor
+            sliderHeight: root.sliderHeight
+            onIconClicked: HardwareState.toggleMute(false)
+            onValueDragged: pct => HardwareState.setVolumePercent(pct, false)
+            onStepped: delta => HardwareState.adjustVolume(delta, false)
         }
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: root.sliderHeight
-            radius: Theme.cornerRadius
-            color: Qt.alpha(Theme.surface_container_high, Theme.cardHighOpacity)
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Math.round(10 * root.scaleFactor)
-                anchors.rightMargin: Math.round(10 * root.scaleFactor)
-                spacing: Math.round(8 * root.scaleFactor)
-
-                Text {
-                    text: HardwareState.brightnessIcon
-                    color: Theme.primary
-                    font.family: Typography.family
-                    font.pixelSize: Typography.size(root.scaleFactor)
-                    font.bold: Typography.globalBold
-                    font.weight: Typography.globalWeight
-                    font.italic: Typography.globalItalic
-                }
-
-                Item {
-                    id: briTrackBox
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Math.round(18 * root.scaleFactor)
-
-                    Rectangle {
-                        id: briTrack
-                        anchors.centerIn: parent
-                        width: parent.width
-                        height: Math.max(4, Math.round(6 * root.scaleFactor))
-                        radius: height / 2
-                        color: Theme.surface_container_lowest
-
-                        Rectangle {
-                            width: briTrack.width * Math.max(0.0, Math.min(1.0, HardwareState.brightness))
-                            height: parent.height
-                            radius: height / 2
-                            color: Theme.primary
-                        }
-                    }
-
-                    Rectangle {
-                        readonly property real knobDim: Math.round(12 * root.scaleFactor)
-                        x: Math.max(0, Math.min(briTrackBox.width - width, (briTrackBox.width * HardwareState.brightness) - (width / 2)))
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: knobDim
-                        height: knobDim
-                        radius: knobDim / 2
-                        color: Theme.primary
-                        border.color: Theme.background
-                        border.width: 1.5
-                    }
-                }
-
-                Text {
-                    text: `${Math.round(HardwareState.brightness * 100)}%`
-                    color: Theme.on_surface_variant
-                    font.family: Typography.family
-                    font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                    font.bold: Typography.globalBold
-                    font.weight: Typography.globalWeight
-                    font.italic: Typography.globalItalic
-                    Layout.preferredWidth: Math.round(38 * root.scaleFactor)
-                    horizontalAlignment: Text.AlignRight
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                preventStealing: true
-                property int scrollAcc: 0
-
-                function setFromX(mx) {
-                    let pad = Math.round(32 * root.scaleFactor);
-                    let w = Math.max(1, width - Math.round(78 * root.scaleFactor));
-                    let pct = Math.max(0.01, Math.min(1.0, (mx - pad) / w));
-                    HardwareState.setBrightnessPercent(pct, false);
-                }
-
-                onClicked: mouse => setFromX(mouse.x)
-                onPositionChanged: mouse => { if (pressed) setFromX(mouse.x); }
-
-                onWheel: wheel => {
-                    scrollAcc += wheel.angleDelta.y;
-                    let steps = Math.trunc(scrollAcc / 120);
-                    if (steps !== 0) {
-                        HardwareState.adjustBrightness(steps, false);
-                        scrollAcc -= steps * 120;
-                    }
-                    wheel.accepted = true;
-                }
-            }
+        SliderRow {
+            icon: HardwareState.brightnessIcon
+            value: HardwareState.brightness
+            label: `${Math.round(HardwareState.brightness * 100)}%`
+            muted: false
+            minValue: 0.01
+            scaleFactor: root.scaleFactor
+            sliderHeight: root.sliderHeight
+            onValueDragged: pct => HardwareState.setBrightnessPercent(pct, false)
+            onStepped: delta => HardwareState.adjustBrightness(delta, false)
         }
     }
 }
