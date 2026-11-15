@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stress-tests notifications, markup, action callbacks, and bar pill states (Wi-Fi, battery, updates).
+# Stress-tests notifications, markup, action callbacks, and bar module states (Wi-Fi, battery, updates).
 
 mode="${1:-all}"
 
@@ -57,7 +57,7 @@ run_notif_tests() {
 }
 
 run_pill_tests() {
-  echo "--- 7. Bar Pill State Simulation (Battery, Wi-Fi, Updates) ---"
+  echo "--- 7. Bar Module State Simulation (Battery, Wi-Fi, Updates) ---"
   echo "  -> Battery: Critical (10% Discharging)"
   quickshell ipc call test battery 10 Discharging
   sleep 1.2
@@ -102,7 +102,7 @@ run_pill_tests() {
   quickshell ipc call test updates 60 12 10
   sleep 2.0
 
-  echo "  -> Resetting bar pills to live system state"
+  echo "  -> Resetting bar modules to live system state"
   quickshell ipc call test reset
 }
 

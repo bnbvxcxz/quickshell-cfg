@@ -1,5 +1,5 @@
 // Scrollable notification center history list.
-// Renders grouped notification cards with action execution, focus jumping, and desktop scroll gestures.
+// Renders grouped notification cards with action execution, inline replies, swipe-to-dismiss, and scroll gestures.
 
 import QtQuick
 import QtQuick.Layouts
@@ -131,7 +131,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: NotificationState.clearHistory()
+                    onClicked: { Logger.debug("NotifHistory", "Clear All clicked"); NotificationState.clearHistory(); }
                 }
             }
         }
@@ -178,6 +178,7 @@ Item {
                     isToast: false
 
                     onCardClicked: {
+                        Logger.debug("NotifHistory", `Clicked #${modelData.id} (${modelData.appName})`);
                         NotificationState.activateNotification(modelData.id, modelData.appName, modelData.desktopEntry);
                         if (modelData.repeatCount > 1) {
                             histCard.expanded = !histCard.expanded;
@@ -185,11 +186,18 @@ Item {
                     }
 
                     onCloseClicked: {
+                        Logger.debug("NotifHistory", `Dismissed #${modelData.id}`);
                         NotificationState.dismissHistory(modelData.id);
                     }
 
                     onActionTriggered: actionId => {
+                        Logger.debug("NotifHistory", `Action #${modelData.id}: ${actionId}`);
                         NotificationState.invokeAction(modelData.id, actionId);
+                    }
+
+                    onInlineReplySent: text => {
+                        Logger.debug("NotifHistory", `Inline reply #${modelData.id}`);
+                        NotificationState.sendInlineReply(modelData.id, text);
                     }
                 }
             }
