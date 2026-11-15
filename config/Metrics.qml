@@ -1,5 +1,5 @@
-// Central dynamic scaling and UI geometry constants.
-// Computes layout scaling from physical display dimensions and compositor scale.
+// Main layout, spacing, corner, and opacity config, plus per-monitor DPI scaling.
+// Edit the tokens at the top to customize the bar and drawer without touching Matugen's Theme.qml.
 
 pragma Singleton
 import QtQuick
@@ -11,6 +11,37 @@ Item {
     id: root
 
     readonly property real baseResolutionHeight: 1200.0
+
+    // --- Bar & module shape ---
+    // -1 gives full capsule pills; 0 gives sharp square boxes; 4+ gives rounded boxes.
+    readonly property int moduleRadius: -1
+    readonly property int moduleBorderWidth: 0
+    readonly property color moduleBorderColor: Theme.outline_variant
+    // Corner radius for drawers, notification cards, and popups.
+    readonly property int cornerRadius: 10
+
+    // --- Bar gaps & sizing (pre-DPI scaling) ---
+    readonly property int baseBarHeight: 22
+    readonly property int baseModulePadding: 6   // inner left/right padding inside each module
+    readonly property int baseModuleGapX: 4      // horizontal gap between bar modules
+    readonly property int baseModuleGapY: 0      // top/bottom inset inside the bar (0 = full bar height)
+    readonly property int baseBarMarginX: 2      // outer left/right margin at screen edges
+    readonly property int baseSpacing: 4         // gap between icon and text inside a module
+
+    // --- Control center dimensions (pre-DPI scaling) ---
+    readonly property int baseDrawerWidth: 360
+    readonly property int baseDrawerHeight: 600
+
+    // --- Surface & widget opacities (0.0 to 1.0) ---
+    readonly property real barOpacity: 0.7
+    readonly property real drawerOpacity: 0.85
+    readonly property real cardOpacity: 0.65
+    readonly property real cardHighOpacity: 0.7
+    readonly property real toastOpacity: 0.92
+    readonly property real chipOpacity: 0.8
+    readonly property real subtleOutlineOpacity: 0.45
+    readonly property real trayItemOpacity: 0.5
+    readonly property real trayHoverOpacity: 0.25
 
     function scaleFor(screenObj) {
         if (!screenObj) return 1.0;
@@ -46,17 +77,17 @@ Item {
         return screens.length > 0 ? scaleFor(screens[0]) : 1.0;
     }
 
-    readonly property int barHeight: Math.round(Theme.baseBarHeight * currentScale)
-    readonly property int pillRadius: Math.round(barHeight / 2)
-    readonly property int pillPadding: Math.round(Theme.basePillPadding * currentScale)
-    readonly property int pillSpacing: Math.round(Theme.baseSpacing * currentScale)
+    readonly property int barHeight: Math.round(baseBarHeight * currentScale)
+    readonly property int moduleHeight: Math.max(12, Math.round((baseBarHeight - (baseModuleGapY * 2)) * currentScale))
+    readonly property int modulePadding: Math.round(baseModulePadding * currentScale)
+    readonly property int moduleSpacing: Math.round(baseSpacing * currentScale)
     readonly property int trayIconSize: Math.max(16, Math.round(barHeight - (5 * currentScale)))
 
-    readonly property int padding: pillSpacing
+    readonly property int padding: moduleSpacing
     readonly property int iconSize: trayIconSize
 
-    readonly property int drawerWidth: Math.round(Theme.baseDrawerWidth * currentScale)
-    readonly property int drawerHeight: Math.round(Theme.baseDrawerHeight * currentScale)
+    readonly property int drawerWidth: Math.round(baseDrawerWidth * currentScale)
+    readonly property int drawerHeight: Math.round(baseDrawerHeight * currentScale)
 
     function scaled(value, scale) {
         return Math.round(value * (scale || currentScale));

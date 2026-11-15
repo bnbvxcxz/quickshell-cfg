@@ -1,3 +1,4 @@
 singleton Theme 1.0 Theme.qml
 singleton Metrics 1.0 Metrics.qml
 singleton Typography 1.0 Typography.qml
+singleton Commands 1.0 Commands.qml

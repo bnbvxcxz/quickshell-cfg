@@ -8,12 +8,15 @@ import "."
 Item {
     id: root
 
+    readonly property string fallbackFamily: "JetBrainsMono NFP"
+    readonly property int fallbackSize: 10
+
     readonly property font systemFont: Qt.application.font
-    readonly property string family: systemFont.family !== "" ? systemFont.family : Theme.fontFamily
+    readonly property string family: systemFont.family !== "" ? systemFont.family : fallbackFamily
 
     readonly property real baseSize: systemFont.pixelSize > 0
         ? systemFont.pixelSize
-        : (systemFont.pointSize > 0 ? (systemFont.pointSize * 1.333) : Theme.fontSize)
+        : (systemFont.pointSize > 0 ? (systemFont.pointSize * 1.333) : fallbackSize)
 
     property bool globalBold: true
     property bool globalItalic: false

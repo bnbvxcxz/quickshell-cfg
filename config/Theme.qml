@@ -56,28 +56,6 @@ QtObject {
     readonly property color tertiary_fixed: "#cce5ff"
     readonly property color tertiary_fixed_dim: "#adcae6"
 
-    readonly property string fontFamily: "JetBrainsMono NFP"
-    readonly property int fontSize: 10
-    readonly property int cornerRadius: 10
-    // Set pillRadius to -1 for capsule pills, or >= 0 (e.g. 0 or 4) for boxy modules.
-    readonly property int pillRadius: -1
-    readonly property int pillBorderWidth: 0
-    readonly property color pillBorderColor: outline_variant
-    readonly property real barOpacity: 0.7
-    readonly property real drawerOpacity: 0.85
 
-    readonly property int baseBarHeight: 22
-    readonly property int basePillPadding: 6
-    readonly property int baseSpacing: 4
-    readonly property int baseDrawerWidth: 360
-    readonly property int baseDrawerHeight: 600
 
-    // Semantic opacity tokens (applied with Qt.alpha in modules to avoid QtObject singleton init issues).
-    readonly property real cardOpacity: 0.65
-    readonly property real cardHighOpacity: 0.7
-    readonly property real toastOpacity: 0.92
-    readonly property real chipOpacity: 0.8
-    readonly property real subtleOutlineOpacity: 0.45
-    readonly property real trayItemOpacity: 0.5
-    readonly property real trayHoverOpacity: 0.25
 }
