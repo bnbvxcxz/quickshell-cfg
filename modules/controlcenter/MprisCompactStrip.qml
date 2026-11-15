@@ -25,7 +25,7 @@ RowLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.requestExpand()
+        onClicked: { Logger.debug("MprisCard", "Compact strip -> expand"); root.requestExpand(); }
 
         RowLayout {
             anchors.fill: parent

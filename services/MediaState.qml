@@ -5,6 +5,7 @@ pragma Singleton
 import QtQuick
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "."
 
 Item {
     id: root
@@ -13,6 +14,9 @@ Item {
     property var activeOrder: ([])
     property int trackPos: 0
     property int trackLen: 0
+    property int cavaBarCount: 12
+    property var cavaLevels: ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    readonly property var ignoredHosts: ["twitter.com", "x.com", "tiktok.com", "instagram.com", "facebook.com", "threads.net", "bsky.app", "reddit.com", "snapchat.com"]
 
 
     function isIgnored(p) {
@@ -22,17 +26,14 @@ Item {
 
         let url = (p.metadata && p.metadata["xesam:url"]) ? String(p.metadata["xesam:url"]).toLowerCase() : "";
         let meta = String((p.trackTitle || "") + " " + (p.trackArtist || "") + " " + (p.trackAlbum || "")).toLowerCase();
-        const hosts = ["twitter.com", "x.com", "tiktok.com", "instagram.com", "facebook.com", "threads.net", "bsky.app", "reddit.com", "snapchat.com"];
-        for (let i = 0; i < hosts.length; i++) {
-            if (url.includes(hosts[i]) || meta.includes(hosts[i])) return true;
+        for (let i = 0; i < ignoredHosts.length; i++) {
+            if (url.includes(ignoredHosts[i]) || meta.includes(ignoredHosts[i])) return true;
         }
         return /\b(tiktok|twitter|instagram)\b/.test(id) || /\b(on x|on twitter|on tiktok)\b/.test(meta);
     }
 
     function hasValidTrack(p) {
-        if (!p) return false;
-        let t = String(p.trackTitle || "").trim();
-        return t.length > 0 && p.playbackState !== MprisPlaybackState.Stopped;
+        return !!p;
     }
 
     function promotePlayer(id) {
@@ -44,6 +45,7 @@ Item {
         }
         activeOrder = next;
         pinId = key;
+        Logger.debug("Media", `Promoted player: ${key}`);
     }
 
     function selectPlayer(id) {
@@ -130,7 +132,7 @@ Item {
         return vals[0];
     }
 
-    readonly property bool hasMedia: activePlayer !== null && cleanTitle.length > 0
+    readonly property bool hasMedia: activePlayer !== null
     readonly property bool isPlaying: activePlayer !== null && activePlayer.playbackState === MprisPlaybackState.Playing
 
     function formatArtist(raw) {
@@ -142,8 +144,9 @@ Item {
 
     readonly property string rawTitle: activePlayer ? String(activePlayer.trackTitle || "") : ""
     readonly property string cleanTitle: {
-        let t = rawTitle.replace(/^\(\d+\)\s*/, "");
-        return t.replace(/\s*-\s*YouTube\s*$/i, "").trim();
+        let t = rawTitle.replace(/^\(\d+\)\s*/, "").replace(/\s*-\s*YouTube\s*$/i, "").trim();
+        if (t.length > 0) return t;
+        return activePlayer ? String(activePlayer.identity || "Idle") : "";
     }
 
     readonly property string cleanArtist: {
@@ -246,5 +249,42 @@ Item {
         let m = Math.floor(sec / 60);
         let s = Math.floor(sec % 60);
         return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
+    // Single shared cava instance across all monitor bars.
+    Process {
+        id: cavaProc
+        command: [
+            "bash", "-c",
+            `exec stdbuf -oL cava -p <(cat <<'EOF'
+[general]
+bars = ${root.cavaBarCount}
+framerate = 30
+autosens = 1
+sleep_timer = 0
+[input]
+method = pulse
+source = auto
+[output]
+method = raw
+raw_target = /dev/stdout
+data_format = ascii
+ascii_max_range = 100
+EOF
+) 2>/dev/null`
+        ]
+        running: root.isPlaying
+        stdout: SplitParser {
+            onRead: line => {
+                let parts = line.trim().split(";").filter(v => v.length > 0);
+                if (parts.length === 0) return;
+                let next = [];
+                for (let i = 0; i < root.cavaBarCount; i++) {
+                    let v = i < parts.length ? (parseInt(parts[i]) || 0) : 0;
+                    next.push(Math.max(0, Math.min(100, v)));
+                }
+                root.cavaLevels = next;
+            }
+        }
     }
 }

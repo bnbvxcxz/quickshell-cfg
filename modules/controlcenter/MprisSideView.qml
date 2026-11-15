@@ -23,7 +23,7 @@ RowLayout {
     Rectangle {
         Layout.preferredHeight: root.boxH
         Layout.preferredWidth: Math.max(Math.round(50 * root.scaleFactor), Math.min(Math.round(100 * root.scaleFactor), root.boxH * root.artRatio))
-        radius: Theme.cornerRadius - 2
+        radius: Metrics.cornerRadius - 2
         color: Theme.surface_container_lowest
         clip: true
         Layout.alignment: Qt.AlignVCenter
@@ -31,7 +31,7 @@ RowLayout {
         Image {
             id: sideImg
             anchors.fill: parent
-            source: MediaState.artSource
+            source: root.visible ? MediaState.artSource : ""
             fillMode: Image.PreserveAspectFit
             smooth: true
             asynchronous: true
@@ -53,7 +53,7 @@ RowLayout {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.toggleMode()
+            onClicked: { Logger.debug("MprisCard", "Side art click -> toggleMode"); root.toggleMode(); }
         }
     }
 

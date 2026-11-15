@@ -21,7 +21,7 @@ Rectangle {
     readonly property int switcherH: (hasMultiPlayers && !isScrolledCompact) ? Math.round(24 * scaleFactor) : 0
 
     Layout.fillWidth: true
-    radius: Theme.cornerRadius
+    radius: Metrics.cornerRadius
     color: Theme.surface_container_high
     clip: true
 
@@ -30,6 +30,7 @@ Rectangle {
         source: MediaState.artSource
         visible: false
         asynchronous: true
+        cache: true
     }
 
     readonly property real artRatio: {
@@ -112,7 +113,7 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: MediaState.selectPlayer(pName)
+                    onClicked: { Logger.debug("MprisCard", `Selected player: ${pName}`); MediaState.selectPlayer(pName); }
                 }
             }
         }

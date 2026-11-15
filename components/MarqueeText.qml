@@ -40,7 +40,8 @@ Item {
             property real currentX: 0
 
             SequentialAnimation on currentX {
-                running: root.overflows
+                running: root.visible && root.overflows
+                onRunningChanged: { if (!running) scrollAnim.currentX = 0; }
                 loops: Animation.Infinite
 
                 PauseAnimation { duration: 1500 }

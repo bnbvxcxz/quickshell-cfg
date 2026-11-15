@@ -27,14 +27,14 @@ ColumnLayout {
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.cornerRadius - 2
+            radius: Metrics.cornerRadius - 2
             color: Theme.surface_container_lowest
             clip: true
 
             Image {
                 id: topImg
                 anchors.fill: parent
-                source: MediaState.artSource
+                source: root.visible ? MediaState.artSource : ""
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 asynchronous: true
@@ -56,7 +56,7 @@ ColumnLayout {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.toggleMode()
+                onClicked: { Logger.debug("MprisCard", "Top art click -> toggleMode"); root.toggleMode(); }
             }
         }
     }
