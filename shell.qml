@@ -1,5 +1,5 @@
 //@ pragma UseQApplication
-//@ pragma Env QT_LOGGING_RULES=qt.qpa.services.warning=false
+//@ pragma Env QT_LOGGING_RULES=qt.qpa.services.warning=false;qt.qpa.wayland.textinput=false
 // Quickshell application entry point.
 // Instantiates multi-screen variants, coordinates drawer state, and exposes IPC command targets.
 
@@ -25,7 +25,7 @@ Scope {
 
     Connections {
         target: NotificationState
-        function onToggleRequested() { shellRoot.togglePanel(); }
+        function onToggleRequested(screenName) { shellRoot.togglePanel(screenName); }
     }
 
     readonly property var actWin: CompositorAdapter.activeTop
@@ -94,7 +94,7 @@ Scope {
 
     IpcHandler {
         target: "drawer"
-        function toggle() { shellRoot.togglePanel(); }
+        function toggle() { shellRoot.togglePanel(""); }
         function open() {
             let tgt = CompositorAdapter.focusMon;
             if (!tgt && Quickshell.screens.length > 0) tgt = Quickshell.screens[0].name;
@@ -113,7 +113,7 @@ Scope {
                 let val = d.value !== undefined ? d.value : 0.5;
                 HardwareState.osdTriggered(d.type || "volume", val, d.icon || HardwareState.volumeIcon, !!d.muted);
             } catch (err) {
-                console.warn("[OSD] Parse error:", err);
+                Logger.warn("OSD", "Parse error: " + err);
             }
         }
     }
@@ -131,17 +131,54 @@ Scope {
     }
 
     IpcHandler {
+        target: "hw"
+        function volUp() { HardwareState.adjustVolume(1); }
+        function volDown() { HardwareState.adjustVolume(-1); }
+        function volMute() { HardwareState.toggleMute(); }
+        function briUp() { HardwareState.adjustBrightness(1); }
+        function briDown() { HardwareState.adjustBrightness(-1); }
+        function micMute() { HardwareState.toggleMicMute(); }
+        function capsToggle() { HardwareState.toggleCaps(); }
+    }
+
+    IpcHandler {
+        target: "test"
+        function battery(pct: string, status: string) { SystemState.simulateBattery(pct, status); }
+        function wifi(ssid: string, signal: string) { SystemState.simulateWifi(ssid, signal); }
+        function ethernet(ip: string) { SystemState.simulateEthernet(ip); }
+        function updates(arch: string, aur: string, flatpak: string) { SystemState.simulateUpdates(arch, aur, flatpak); }
+        function reset() { SystemState.resetSimulation(); }
+    }
+
+    IpcHandler {
+        target: "log"
+        function level(lvl: string) { Logger.setLevel(lvl); }
+    }
+
+    IpcHandler {
         target: "theme"
         function reload() { Quickshell.reload(""); }
     }
 
-    function togglePanel() {
-        if (shellRoot.panelOpen) return shellRoot.panelOpen = false;
-
-        let tgt = CompositorAdapter.focusMon;
+    function togglePanel(targetScreen) {
+        let tgt = targetScreen || CompositorAdapter.focusMon;
         if (!tgt && Quickshell.screens.length > 0) tgt = Quickshell.screens[0].name;
+
+        if (shellRoot.panelOpen) {
+            if (targetScreen && tgt && tgt !== shellRoot.actScr) {
+                shellRoot.prevScr = shellRoot.actScr;
+                shellRoot.actScr = tgt;
+                Logger.debug("Drawer", `Switched to ${tgt} (prev=${shellRoot.prevScr})`);
+                return;
+            }
+            shellRoot.panelOpen = false;
+            Logger.debug("Drawer", `Closed (was on ${shellRoot.actScr})`);
+            return;
+        }
+
         shellRoot.prevScr = shellRoot.actScr ? shellRoot.actScr : tgt;
         shellRoot.actScr = tgt;
         shellRoot.panelOpen = true;
+        Logger.debug("Drawer", `Opened on ${tgt} (prev=${shellRoot.prevScr})`);
     }
 }

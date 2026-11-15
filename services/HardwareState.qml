@@ -6,20 +6,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
+import "."
 
 Item {
     id: root
-
-    IpcHandler {
-        target: "hw"
-        function volUp() { root.adjustVolume(1) }
-        function volDown() { root.adjustVolume(-1) }
-        function volMute() { root.toggleMute() }
-        function briUp() { root.adjustBrightness(1) }
-        function briDown() { root.adjustBrightness(-1) }
-        function micMute() { root.toggleMicMute() }
-        function capsToggle() { root.toggleCaps() }
-    }
 
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
@@ -197,6 +187,7 @@ Item {
                 if (idx <= 0) return;
                 root.briFile = line.slice(0, idx).trim();
                 root.briMax = Math.max(1, parseInt(line.slice(idx + 1).trim()) || 100);
+                Logger.debug("Hardware", `Backlight: ${root.briFile} (max=${root.briMax})`);
             }
         }
     }

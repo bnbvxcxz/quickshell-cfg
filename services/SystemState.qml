@@ -7,41 +7,44 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
 import Quickshell.Services.UPower
+import "../config"
+import "."
 
 Item {
     id: root
 
-    IpcHandler {
-        target: "test"
-        function battery(pct: string, status: string) {
-            root.batTestActive = true;
-            root.setBatteryState(parseInt(pct) || 0, status || "Discharging");
-        }
-        function wifi(ssid: string, signal: string) {
-            root.netTestActive = true;
-            root.setWifiState(ssid, parseInt(signal) || 0);
-        }
-        function ethernet(ip: string) {
-            root.netTestActive = true;
-            root.netIcon = "󰈀";
-            root.netName = ip || "10.0.0.2/24";
-            root.netTxt = `󰈀   ${root.netName}`;
-        }
-        function updates(arch: string, aur: string, flatpak: string) {
-            root.updArch = parseInt(arch) || 0;
-            root.totArch = 800;
-            root.updAur = parseInt(aur) || 0;
-            root.totAur = 50;
-            root.updFlatpak = parseInt(flatpak) || 0;
-            root.totFlatpak = 20;
-        }
-        function reset() {
-            root.batTestActive = false;
-            root.netTestActive = false;
-            root.syncUPower();
-            root.syncNetwork();
-            root.refreshUpdates();
-        }
+    function simulateBattery(pct, status) {
+        batTestActive = true;
+        setBatteryState(parseInt(pct) || 0, status || "Discharging");
+    }
+
+    function simulateWifi(ssid, signal) {
+        netTestActive = true;
+        setWifiState(ssid, parseInt(signal) || 0);
+    }
+
+    function simulateEthernet(ip) {
+        netTestActive = true;
+        netIcon = "󰈀";
+        netName = ip || "10.0.0.2/24";
+        netTxt = `󰈀   ${netName}`;
+    }
+
+    function simulateUpdates(arch, aur, flatpak) {
+        updArch = parseInt(arch) || 0;
+        totArch = 800;
+        updAur = parseInt(aur) || 0;
+        totAur = 50;
+        updFlatpak = parseInt(flatpak) || 0;
+        totFlatpak = 20;
+    }
+
+    function resetSimulation() {
+        batTestActive = false;
+        netTestActive = false;
+        syncUPower();
+        syncNetwork();
+        refreshUpdates();
     }
 
     property int updArch: 0
@@ -221,7 +224,7 @@ Item {
 
     Process {
         id: updProc
-        command: ["bash", "-c", "$HOME/.config/quickshell/scripts/check_updates.sh"]
+        command: [Commands.checkUpdatesScript]
         running: true
         stdout: SplitParser {
             onRead: d => {
@@ -234,6 +237,7 @@ Item {
                 root.totAur = parseInt(p[3]) || 1;
                 root.updFlatpak = parseInt(p[4]) || 0;
                 root.totFlatpak = parseInt(p[5]) || 1;
+                Logger.debug("System", `Updates arch=${root.updArch} aur=${root.updAur} flatpak=${root.updFlatpak}`);
             }
         }
     }
