@@ -1,35 +1,35 @@
-// Universal pill container and text/icon primitive definitions.
-// Standardizes spacing, alignment, and inherits centralized typography settings automatically.
+// Universal bar module container and text/icon primitive definitions.
+// Standardizes box/capsule geometry, spacing, alignment, and centralized typography.
 
 import QtQuick
 import QtQuick.Layouts
 import "../config"
 
 Rectangle {
-    id: pillRoot
+    id: modRoot
 
     default property alias data: contentLayout.data
-    property color pillColor: Theme.surface_container_high
+    property color moduleColor: Theme.surface_container_high
     property real scaleFactor: 1.0
-    property int horizontalPadding: Metrics.scaled(Theme.basePillPadding, scaleFactor)
+    property int horizontalPadding: Metrics.scaled(Metrics.baseModulePadding, scaleFactor)
 
     property bool hoverEnabled: false
     property bool clickable: true
     property bool wheelEnabled: true
     property bool interactive: true
-    readonly property bool containsMouse: pillMouseArea.containsMouse
+    readonly property bool containsMouse: modMouseArea.containsMouse
 
     signal clicked()
     signal rightClicked()
     signal middleClicked()
     signal wheelMoved(int steps)
 
-    implicitHeight: Metrics.scaled(Theme.baseBarHeight, scaleFactor)
+    implicitHeight: Metrics.scaled(Metrics.baseBarHeight, scaleFactor)
     implicitWidth: contentLayout.implicitWidth + (horizontalPadding * 2)
-    radius: Theme.pillRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Theme.pillRadius, scaleFactor)
-    color: pillColor
-    border.width: Theme.pillBorderWidth
-    border.color: Theme.pillBorderColor
+    radius: Metrics.moduleRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Metrics.moduleRadius, scaleFactor)
+    color: moduleColor
+    border.width: Metrics.moduleBorderWidth
+    border.color: Metrics.moduleBorderColor
 
     Layout.alignment: Qt.AlignVCenter
     Layout.fillHeight: false
@@ -39,26 +39,26 @@ Rectangle {
     Layout.rightMargin: visible ? 1 : 0
 
     MouseArea {
-        id: pillMouseArea
+        id: modMouseArea
         anchors.fill: parent
-        enabled: pillRoot.interactive && (pillRoot.clickable || pillRoot.wheelEnabled || pillRoot.hoverEnabled)
-        cursorShape: (pillRoot.interactive && pillRoot.clickable) ? Qt.PointingHandCursor : Qt.ArrowCursor
-        hoverEnabled: pillRoot.hoverEnabled
-        acceptedButtons: (pillRoot.interactive && pillRoot.clickable)
+        enabled: modRoot.interactive && (modRoot.clickable || modRoot.wheelEnabled || modRoot.hoverEnabled)
+        cursorShape: (modRoot.interactive && modRoot.clickable) ? Qt.PointingHandCursor : Qt.ArrowCursor
+        hoverEnabled: modRoot.hoverEnabled
+        acceptedButtons: (modRoot.interactive && modRoot.clickable)
             ? (Qt.LeftButton | Qt.RightButton | Qt.MiddleButton)
             : Qt.NoButton
 
         property int scrollAccumulator: 0
 
         onClicked: mouse => {
-            if (!pillRoot.clickable) return;
-            if (mouse.button === Qt.LeftButton) pillRoot.clicked();
-            else if (mouse.button === Qt.RightButton) pillRoot.rightClicked();
-            else if (mouse.button === Qt.MiddleButton) pillRoot.middleClicked();
+            if (!modRoot.clickable) return;
+            if (mouse.button === Qt.LeftButton) modRoot.clicked();
+            else if (mouse.button === Qt.RightButton) modRoot.rightClicked();
+            else if (mouse.button === Qt.MiddleButton) modRoot.middleClicked();
         }
 
         onWheel: wheel => {
-            if (!pillRoot.wheelEnabled) {
+            if (!modRoot.wheelEnabled) {
                 wheel.accepted = false;
                 return;
             }
@@ -66,7 +66,7 @@ Rectangle {
             scrollAccumulator += dy;
             while (Math.abs(scrollAccumulator) >= 120) {
                 let step = scrollAccumulator > 0 ? 1 : -1;
-                pillRoot.wheelMoved(step);
+                modRoot.wheelMoved(step);
                 scrollAccumulator -= (step * 120);
             }
             wheel.accepted = true;
@@ -76,7 +76,7 @@ Rectangle {
     RowLayout {
         id: contentLayout
         anchors.centerIn: parent
-        spacing: Metrics.scaled(Theme.baseSpacing, pillRoot.scaleFactor)
+        spacing: Metrics.scaled(Metrics.baseSpacing, modRoot.scaleFactor)
     }
 
     component Label: Text {

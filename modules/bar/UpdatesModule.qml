@@ -8,14 +8,14 @@ import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     property var barWindowRef: null
 
     readonly property int avgState: SystemState.avgState
 
-    readonly property color currentPillBg: {
+    readonly property color currentModBg: {
         switch (avgState) {
             case 2: return Theme.error;
             case 1: return Theme.error_container;
@@ -23,7 +23,7 @@ Pill {
         }
     }
 
-    readonly property color currentPillFg: {
+    readonly property color currentModFg: {
         switch (avgState) {
             case 2: return Theme.on_error;
             case 1: return Theme.on_error_container;
@@ -39,39 +39,29 @@ Pill {
         }
     }
 
-    pillColor: currentPillBg
+    moduleColor: currentModBg
     visible: SystemState.updCount > 0
     Layout.preferredWidth: visible ? -1 : 0
     hoverEnabled: true
 
-    onClicked: HardwareState.runCmd("nohup setsid kitty --class quickshell_update -e sh -c '$HOME/.config/quickshell/scripts/update.sh' >/dev/null 2>&1 &")
+    onClicked: { Logger.debug("Updates", `Click -> launch updater (${SystemState.updCount} pending)`); HardwareState.runCmd(`nohup setsid ${Commands.terminal} --class quickshell_update -e "${Commands.updateScript}" >/dev/null 2>&1 &`); }
 
-    Pill.Icon {
+    BarModule.Icon {
         text: "󰏔"
-        color: root.currentPillFg
+        color: root.currentModFg
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: `${SystemState.updCount}`
-        color: root.currentPillFg
+        color: root.currentModFg
         scaleFactor: root.scaleFactor
-    }
-
-    readonly property real windowX: {
-        if (!root.barWindowRef || !root.barWindowRef.contentItem) return 0;
-        let _dep = root.x + root.width;
-        let pt = root.mapToItem(root.barWindowRef.contentItem, 0, 0);
-        return pt ? pt.x : 0;
     }
 
     PopupWindow {
         id: updatePopupWindow
         anchor.window: root.barWindowRef
-        anchor.rect.x: root.windowX
-        anchor.rect.y: 0
-        anchor.rect.width: root.width
-        anchor.rect.height: root.height
+        anchor.item: root
         anchor.edges: Edges.Bottom
         anchor.gravity: Edges.Bottom
 
@@ -89,9 +79,9 @@ Pill {
             implicitWidth: breakdownCol.implicitWidth + Metrics.scaled(24, root.scaleFactor)
             implicitHeight: breakdownCol.implicitHeight + Metrics.scaled(16, root.scaleFactor)
 
-            radius: Theme.cornerRadius
+            radius: Metrics.cornerRadius
             color: Theme.surface_container_high
-            border.color: Qt.alpha(root.currentPillBg, 0.9)
+            border.color: Qt.alpha(root.currentModBg, 0.9)
             border.width: 1
 
             MouseArea {

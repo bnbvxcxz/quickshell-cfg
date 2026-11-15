@@ -2,19 +2,18 @@
 // Manages systemd-inhibit idle sleep locks without external pkill calls.
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell.Io
 import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     property bool inhibited: false
     implicitWidth: implicitHeight
     horizontalPadding: 0
-    pillColor: inhibited ? Theme.primary_container : Theme.surface_container_high
+    moduleColor: inhibited ? Theme.primary_container : Theme.surface_container_high
 
     Process {
         id: inhibitor
@@ -25,9 +24,10 @@ Pill {
         root.inhibited = !root.inhibited;
         // Toggling running = false cleanly stops the child process in Quickshell.
         inhibitor.running = root.inhibited;
+        Logger.debug("Idle", `Inhibitor ${root.inhibited ? "enabled" : "disabled"}`);
     }
 
-    Pill.Icon {
+    BarModule.Icon {
         text: root.inhibited ? "" : ""
         color: root.inhibited ? Theme.on_primary_container : Theme.on_surface_variant
         scaleFactor: root.scaleFactor

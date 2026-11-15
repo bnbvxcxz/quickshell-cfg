@@ -7,7 +7,7 @@ import Quickshell.Services.Pipewire
 import "../../config"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     clickable: false
@@ -33,16 +33,16 @@ Pill {
 
     visible: hasMic || hasScreen
     Layout.preferredWidth: visible ? -1 : 0
-    pillColor: Theme.error_container
+    moduleColor: Theme.error_container
 
-    Pill.Icon {
+    BarModule.Icon {
         visible: root.hasMic
         text: "󰍬"
         color: Theme.on_error_container
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Icon {
+    BarModule.Icon {
         visible: root.hasScreen
         text: "󰹑"
         color: Theme.on_error_container

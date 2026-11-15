@@ -6,21 +6,21 @@ import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
-    onClicked: HardwareState.runCmd("kitty --class quickshell_nmtui -e nmtui")
+    onClicked: { Logger.debug("Network", "Click -> open nmtui"); HardwareState.runCmd([Commands.terminal, "--class", "quickshell_nmtui", "-e", "nmtui"]); }
 
     readonly property bool isDisconnected: SystemState.netName === "disconnected"
     readonly property color netColor: isDisconnected ? Theme.error : Theme.primary
 
-    Pill.Icon {
+    BarModule.Icon {
         text: SystemState.netIcon
         color: root.netColor
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: SystemState.netName
         color: root.netColor
         visible: text.length > 0

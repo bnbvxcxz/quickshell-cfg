@@ -1,5 +1,5 @@
 // Main status bar layer surface.
-// Arranges modular left, center, and right pills with per-screen scaling and spring entrance.
+// Arranges modular left, center, and right modules with per-screen scaling and spring entrance.
 
 import QtQuick
 import QtQuick.Layouts
@@ -23,11 +23,11 @@ PanelWindow {
     }
 
     readonly property real screenScale: Metrics.scaleFor(barWindow.screen)
-    readonly property int fullHeight: Metrics.scaled(Theme.baseBarHeight, screenScale)
+    readonly property int fullHeight: Metrics.scaled(Metrics.baseBarHeight, screenScale)
 
     implicitHeight: fullHeight
     WlrLayershell.exclusiveZone: fullHeight
-    color: Qt.alpha(Theme.background, Theme.barOpacity)
+    color: Qt.alpha(Theme.background, Metrics.barOpacity)
 
     property bool appeared: false
     margins.top: appeared ? 0 : -fullHeight
@@ -52,8 +52,8 @@ PanelWindow {
 
     readonly property real availTitleWidth: {
         let closestSide = Math.max(leftBarRow.width, rightBarRow.width);
-        let pillGap = Metrics.scaled(48, barWindow.screenScale);
-        let free = barWindow.width - (closestSide * 2) - (pillGap * 2);
+        let modGap = Metrics.scaled(48, barWindow.screenScale);
+        let free = barWindow.width - (closestSide * 2) - (modGap * 2);
         return Math.max(Metrics.scaled(120, barWindow.screenScale), free);
     }
 
@@ -67,21 +67,21 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Metrics.scaled(2, barWindow.screenScale)
 
-            ClockPill { scaleFactor: barWindow.screenScale }
+            ClockModule { scaleFactor: barWindow.screenScale }
 
-            WorkspacesPill {
+            WorkspacesModule {
                 scaleFactor: barWindow.screenScale
                 activeBg: barWindow.activeWsBg
                 activeFg: barWindow.activeWsFg
                 inactiveFg: barWindow.inactiveWsFg
             }
 
-            IdlePill { scaleFactor: barWindow.screenScale }
-            MprisPill { scaleFactor: barWindow.screenScale }
-            CavaPill { scaleFactor: barWindow.screenScale }
+            IdleModule { scaleFactor: barWindow.screenScale }
+            MprisModule { scaleFactor: barWindow.screenScale }
+            CavaModule { scaleFactor: barWindow.screenScale }
         }
 
-        WindowTitlePill {
+        WindowTitleModule {
             anchors.centerIn: parent
             scaleFactor: barWindow.screenScale
             maxPixelWidth: barWindow.availTitleWidth
@@ -94,19 +94,19 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Metrics.scaled(2, barWindow.screenScale)
 
-            UpdatesPill {
+            UpdatesModule {
                 scaleFactor: barWindow.screenScale
                 barWindowRef: barWindow
             }
-            SystemTrayPill {
+            SystemTrayModule {
                 scaleFactor: barWindow.screenScale
                 barWindowRef: barWindow
             }
-            AudioPill { scaleFactor: barWindow.screenScale }
-            BatteryPill { scaleFactor: barWindow.screenScale }
-            NetworkPill { scaleFactor: barWindow.screenScale }
-            BacklightPill { scaleFactor: barWindow.screenScale }
-            ControlCenterPill { scaleFactor: barWindow.screenScale }
+            AudioModule { scaleFactor: barWindow.screenScale }
+            BatteryModule { scaleFactor: barWindow.screenScale }
+            NetworkModule { scaleFactor: barWindow.screenScale }
+            BacklightModule { scaleFactor: barWindow.screenScale }
+            ControlCenterModule { scaleFactor: barWindow.screenScale; screenName: barWindow.screen ? barWindow.screen.name : "" }
         }
     }
 }

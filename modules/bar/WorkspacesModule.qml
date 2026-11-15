@@ -3,7 +3,6 @@
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Hyprland
 import "../../config"
 import "../../services"
 import "../../components"
@@ -16,12 +15,12 @@ Rectangle {
     property color activeFg: Theme.on_secondary
     property color inactiveFg: Theme.secondary
 
-    implicitHeight: Metrics.scaled(Theme.baseBarHeight, scaleFactor)
+    implicitHeight: Metrics.scaled(Metrics.baseBarHeight, scaleFactor)
     implicitWidth: wsRow.implicitWidth
-    radius: Theme.pillRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Theme.pillRadius, scaleFactor)
+    radius: Metrics.moduleRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Metrics.moduleRadius, scaleFactor)
     color: Theme.surface_container_low
-    border.width: Theme.pillBorderWidth
-    border.color: Theme.pillBorderColor
+    border.width: Metrics.moduleBorderWidth
+    border.color: Metrics.moduleBorderColor
 
     Layout.alignment: Qt.AlignVCenter
     Layout.fillHeight: false
@@ -71,12 +70,14 @@ Rectangle {
 
         if (idx === -1) return CompositorAdapter.stepWorkspace(dir);
         let nextIdx = (idx + dir + list.length) % list.length;
+        Logger.debug("Workspaces", `Step relative dir=${dir} -> ${list[nextIdx].id}`);
         CompositorAdapter.dispatchWorkspace(list[nextIdx].id);
     }
 
     Connections {
         target: CompositorAdapter
         function onActiveWsIdChanged() { root.updateActiveTarget() }
+        function onWorkspacesChanged() { Qt.callLater(root.updateActiveTarget) }
     }
 
     SpringBehavior { id: springPresets; mode: "default" }
@@ -148,7 +149,7 @@ Rectangle {
                 Text {
                     id: wsText
                     anchors.centerIn: parent
-                    text: wsBtn.wsId
+                    text: String(wsBtn.wsId)
                     color: {
                         if (wsBtn.isActive) return root.activeFg;
                         if (wsBtn.isOccupied) return root.inactiveFg;
@@ -166,7 +167,7 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: CompositorAdapter.dispatchWorkspace(wsBtn.wsId)
+                    onClicked: { Logger.debug("Workspaces", `Click -> workspace ${wsBtn.wsId}`); CompositorAdapter.dispatchWorkspace(wsBtn.wsId); }
                     onWheel: wheel => root.handleWheel(wheel)
                 }
 

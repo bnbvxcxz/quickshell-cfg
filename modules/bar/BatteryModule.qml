@@ -7,7 +7,7 @@ import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     clickable: false
@@ -18,7 +18,7 @@ Pill {
     readonly property int pct: SystemState.batPct
     readonly property bool charging: SystemState.isBatCharging
 
-    pillColor: {
+    moduleColor: {
         if (!charging && pct <= 15) return Theme.error_container;
         if (charging) return Theme.primary_container;
         return Theme.surface_container_high;
@@ -32,7 +32,7 @@ Pill {
         return Theme.primary;
     }
 
-    Pill.Icon {
+    BarModule.Icon {
         text: SystemState.batIco
         color: root.statusColor
         scaleFactor: root.scaleFactor
@@ -40,7 +40,7 @@ Pill {
         Behavior on color { ColorAnimation { duration: 150 } }
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: SystemState.batCap
         color: root.statusColor
         scaleFactor: root.scaleFactor

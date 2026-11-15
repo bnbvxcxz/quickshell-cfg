@@ -1,4 +1,8 @@
-Pill 1.0 Pill.qml
+BarModule 1.0 BarModule.qml
 MarqueeText 1.0 MarqueeText.qml
 SpringBehavior 1.0 SpringBehavior.qml
+SliderRow 1.0 SliderRow.qml
+NotificationActions 1.0 NotificationActions.qml
+NotificationHistoryTree 1.0 NotificationHistoryTree.qml
+NotificationReplyBar 1.0 NotificationReplyBar.qml
 NotificationCard 1.0 NotificationCard.qml

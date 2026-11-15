@@ -1,4 +1,4 @@
-// Status bar display brightness pill.
+// Status bar display brightness module.
 // Displays current display backlight level and adjusts on mouse scroll with OSD feedback.
 
 import QtQuick
@@ -6,20 +6,20 @@ import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     clickable: false
     wheelEnabled: true
 
-    onWheelMoved: steps => HardwareState.adjustBrightness(steps, true)
+    onWheelMoved: steps => { Logger.debug("Backlight", `Wheel step=${steps}`); HardwareState.adjustBrightness(steps, true); }
 
-    Pill.Icon {
+    BarModule.Icon {
         text: HardwareState.brightnessIcon
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: `${Math.round(HardwareState.brightness * 100)}%`
         scaleFactor: root.scaleFactor
     }

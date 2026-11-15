@@ -7,8 +7,9 @@ import Quickshell
 import Quickshell.Services.SystemTray
 import "../../config"
 import "../../components"
+import "../../services"
 
-Pill {
+BarModule {
     id: root
 
     property var barWindowRef: null
@@ -20,15 +21,23 @@ Pill {
     property var activeItem: null
     property Item activeAnchor: null
     property bool menuOpen: false
+    property double menuClosedAt: 0
 
     function toggleMenu(item, anchorItem) {
         if (root.menuOpen && root.activeItem === item) {
             root.menuOpen = false;
+            Logger.debug("Tray", `Closed menu for ${item.id || "item"}`);
+            return;
+        }
+        // PopupWindow grabFocus dismisses right before onClicked fires; keep closed on 2nd click.
+        if (root.activeItem === item && (Date.now() - root.menuClosedAt) < 250) {
+            Logger.debug("Tray", `Suppressed reopen after grab-dismiss for ${item.id || "item"}`);
             return;
         }
         root.activeItem = item;
         root.activeAnchor = anchorItem;
         root.menuOpen = true;
+        Logger.debug("Tray", `Opened menu for ${item.id || "item"}`);
     }
 
     QsMenuOpener {
@@ -47,7 +56,10 @@ Pill {
         color: "transparent"
 
         onVisibleChanged: {
-            if (!visible) root.menuOpen = false;
+            if (!visible) {
+                root.menuOpen = false;
+                root.menuClosedAt = Date.now();
+            }
         }
 
         readonly property real s: root.scaleFactor
@@ -56,9 +68,9 @@ Pill {
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.cornerRadius
-            color: Qt.alpha(Theme.surface, Theme.toastOpacity)
-            border.color: Qt.alpha(Theme.outline_variant, Theme.subtleOutlineOpacity)
+            radius: Metrics.cornerRadius
+            color: Qt.alpha(Theme.surface, Metrics.toastOpacity)
+            border.color: Qt.alpha(Theme.outline_variant, Metrics.subtleOutlineOpacity)
             border.width: 1
 
             ColumnLayout {
@@ -83,14 +95,14 @@ Pill {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             height: 1
-                            color: Qt.alpha(Theme.outline_variant, Theme.subtleOutlineOpacity)
+                            color: Qt.alpha(Theme.outline_variant, Metrics.subtleOutlineOpacity)
                         }
 
                         Rectangle {
                             visible: !entryRow.modelData.isSeparator
                             anchors.fill: parent
                             radius: Math.round(6 * trayMenuPopup.s)
-                            color: entryMouse.containsMouse && entryRow.modelData.enabled ? Qt.alpha(Theme.primary, Theme.trayHoverOpacity) : "transparent"
+                            color: entryMouse.containsMouse && entryRow.modelData.enabled ? Qt.alpha(Theme.primary, Metrics.trayHoverOpacity) : "transparent"
 
                             Text {
                                 id: entryLabel
@@ -116,6 +128,7 @@ Pill {
                                 enabled: entryRow.modelData.enabled
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onClicked: {
+                                    Logger.debug("Tray", `Menu item triggered: ${entryRow.modelData.text}`);
                                     entryRow.modelData.triggered();
                                     root.menuOpen = false;
                                 }
@@ -128,7 +141,7 @@ Pill {
     }
 
     RowLayout {
-        spacing: Metrics.scaled(Theme.baseSpacing, root.scaleFactor)
+        spacing: Metrics.scaled(Metrics.baseSpacing, root.scaleFactor)
 
         Repeater {
             id: trayRepeater
@@ -140,9 +153,9 @@ Pill {
 
                 implicitHeight: root.implicitHeight - Metrics.scaled(4, root.scaleFactor)
                 implicitWidth: implicitHeight
-                radius: Theme.pillRadius < 0 ? Math.round(implicitHeight / 2) : Math.max(2, Metrics.scaled(Theme.pillRadius, root.scaleFactor) - 2)
+                radius: Metrics.moduleRadius < 0 ? Math.round(implicitHeight / 2) : Math.max(2, Metrics.scaled(Metrics.moduleRadius, root.scaleFactor) - 2)
 
-                color: itemMouse.containsMouse ? Qt.alpha(Theme.primary, Theme.trayHoverOpacity) : Qt.alpha(Theme.surface_container_highest, Theme.trayItemOpacity)
+                color: itemMouse.containsMouse ? Qt.alpha(Theme.primary, Metrics.trayHoverOpacity) : Qt.alpha(Theme.surface_container_highest, Metrics.trayItemOpacity)
                 Behavior on color { ColorAnimation { duration: 100 } }
 
                 Image {
@@ -169,11 +182,12 @@ Pill {
 
                         if (mouse.button === Qt.LeftButton) {
                             if (item.onlyMenu && canMenu) root.toggleMenu(item, itemContainer);
-                            else item.activate();
+                            else { Logger.debug("Tray", `Left click activate: ${item.id || "item"}`); item.activate(); }
                         } else if (mouse.button === Qt.RightButton) {
                             if (canMenu) root.toggleMenu(item, itemContainer);
-                            else item.secondaryActivate();
+                            else { Logger.debug("Tray", `Right click secondaryActivate: ${item.id || "item"}`); item.secondaryActivate(); }
                         } else if (mouse.button === Qt.MiddleButton) {
+                            Logger.debug("Tray", `Middle click secondaryActivate: ${item.id || "item"}`);
                             item.secondaryActivate();
                         }
                     }

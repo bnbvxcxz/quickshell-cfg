@@ -6,7 +6,7 @@ import Quickshell
 import "../../config"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     clickable: false
@@ -17,12 +17,12 @@ Pill {
         precision: SystemClock.Minutes
     }
 
-    Pill.Icon {
+    BarModule.Icon {
         text: "󰥔"
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: Qt.formatDateTime(sysClock.date, "ddd, MMM d - h:mm AP")
         scaleFactor: root.scaleFactor
     }

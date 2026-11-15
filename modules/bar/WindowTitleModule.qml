@@ -7,7 +7,7 @@ import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
     clickable: false
@@ -33,12 +33,12 @@ Pill {
         return t;
     }
 
-    Pill.Icon {
+    BarModule.Icon {
         text: root.displayIcon
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: root.cleanTitle
         elide: Text.ElideRight
         width: Math.min(implicitWidth, Math.max(Metrics.scaled(120, root.scaleFactor), root.maxPixelWidth))

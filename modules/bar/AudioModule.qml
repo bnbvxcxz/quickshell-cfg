@@ -6,23 +6,23 @@ import "../../config"
 import "../../services"
 import "../../components"
 
-Pill {
+BarModule {
     id: root
 
-    onClicked: HardwareState.runCmd("pavucontrol")
-    onRightClicked: HardwareState.toggleMute(true)
-    onMiddleClicked: HardwareState.toggleMute(false)
-    onWheelMoved: steps => HardwareState.adjustVolume(steps, true)
+    onClicked: { Logger.debug("Audio", "Click -> open mixer"); HardwareState.runCmd(Commands.mixer); }
+    onRightClicked: { Logger.debug("Audio", "Right click -> toggle mute (OSD)"); HardwareState.toggleMute(true); }
+    onMiddleClicked: { Logger.debug("Audio", "Middle click -> toggle mute"); HardwareState.toggleMute(false); }
+    onWheelMoved: steps => { Logger.debug("Audio", `Wheel step=${steps}`); HardwareState.adjustVolume(steps, true); }
 
     readonly property color fgColor: HardwareState.isMuted ? Theme.error : Theme.primary
 
-    Pill.Icon {
+    BarModule.Icon {
         text: HardwareState.volumeIcon
         color: root.fgColor
         scaleFactor: root.scaleFactor
     }
 
-    Pill.Label {
+    BarModule.Label {
         text: HardwareState.isMuted ? "Muted" : `${Math.round(HardwareState.volume * 100)}%`
         color: root.fgColor
         scaleFactor: root.scaleFactor
