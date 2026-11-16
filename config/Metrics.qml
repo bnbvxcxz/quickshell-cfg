@@ -9,9 +9,6 @@ import "."
 
 Item {
     id: root
-
-    readonly property real baseResolutionHeight: 1200.0
-
     // --- Bar & module shape ---
     // -1 gives full capsule pills; 0 gives sharp square boxes; 4+ gives rounded boxes.
     readonly property int moduleRadius: -1
