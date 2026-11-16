@@ -65,6 +65,7 @@ ColumnLayout {
                             source: modelData.icon || ""
                             visible: source !== "" && status === Image.Ready
                             fillMode: Image.PreserveAspectFit
+                            sourceSize: Qt.size(icoDim * 2, icoDim * 2)
                             smooth: true
                         }
 

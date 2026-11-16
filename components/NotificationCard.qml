@@ -23,7 +23,7 @@ Item {
     property bool dismissing: false
     property int trackedId: -1
 
-    readonly property bool hovered: cardHover.hovered || closeMouse.containsMouse || replyBar.inputFocused
+    readonly property bool hovered: cardMouse.containsMouse || closeMouse.containsMouse || replyBar.inputFocused
     readonly property bool swiping: swipeDrag.active || dismissing
     readonly property bool replyFocused: replyBar.inputFocused
 
@@ -120,11 +120,6 @@ Item {
         Behavior on color { ColorAnimation { duration: 120 } }
         Behavior on border.color { ColorAnimation { duration: 120 } }
 
-        HoverHandler {
-            id: cardHover
-            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        }
-
         DragHandler {
             id: swipeDrag
             target: null
@@ -140,9 +135,11 @@ Item {
             }
         }
 
+        // MouseArea clears containsMouse reliably on Wayland window leave, unlike HoverHandler.
         MouseArea {
             id: cardMouse
             anchors.fill: parent
+            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             z: -1
@@ -187,6 +184,7 @@ Item {
                             readonly property int icoDim: Math.round(14 * card.scaleFactor)
                             Layout.preferredWidth: icoDim
                             Layout.preferredHeight: icoDim
+                            sourceSize: Qt.size(icoDim * 2, icoDim * 2)
                             source: (card.itemData && card.itemData.appIcon) ? card.itemData.appIcon : ""
                             visible: source !== "" && status === Image.Ready
                             fillMode: Image.PreserveAspectFit
@@ -304,6 +302,7 @@ Item {
                             Image {
                                 id: notifImg
                                 anchors.fill: parent
+                                sourceSize: Qt.size(parent.imgDim * 2, parent.imgDim * 2)
                                 source: (card.itemData && card.itemData.image) ? card.itemData.image : ""
                                 visible: source !== "" && status === Image.Ready
                                 fillMode: Image.PreserveAspectCrop

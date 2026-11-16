@@ -169,35 +169,33 @@ Item {
 
                 delegate: NotificationCard {
                     id: histCard
-                    required property var modelData
-                    required property int index
 
                     width: list.width
-                    itemData: modelData
+                    itemData: model
                     scaleFactor: root.scaleFactor
                     isToast: false
 
                     onCardClicked: {
-                        Logger.debug("NotifHistory", `Clicked #${modelData.id} (${modelData.appName})`);
-                        NotificationState.activateNotification(modelData.id, modelData.appName, modelData.desktopEntry);
-                        if (modelData.repeatCount > 1) {
+                        Logger.debug("NotifHistory", `Clicked #${model.id} (${model.appName})`);
+                        NotificationState.activateNotification(model.id, model.appName, model.desktopEntry);
+                        if (model.repeatCount > 1) {
                             histCard.expanded = !histCard.expanded;
                         }
                     }
 
                     onCloseClicked: {
-                        Logger.debug("NotifHistory", `Dismissed #${modelData.id}`);
-                        NotificationState.dismissHistory(modelData.id);
+                        Logger.debug("NotifHistory", `Dismissed #${model.id}`);
+                        NotificationState.dismissHistory(model.id);
                     }
 
                     onActionTriggered: actionId => {
-                        Logger.debug("NotifHistory", `Action #${modelData.id}: ${actionId}`);
-                        NotificationState.invokeAction(modelData.id, actionId);
+                        Logger.debug("NotifHistory", `Action #${model.id}: ${actionId}`);
+                        NotificationState.invokeAction(model.id, actionId);
                     }
 
                     onInlineReplySent: text => {
-                        Logger.debug("NotifHistory", `Inline reply #${modelData.id}`);
-                        NotificationState.sendInlineReply(modelData.id, text);
+                        Logger.debug("NotifHistory", `Inline reply #${model.id}`);
+                        NotificationState.sendInlineReply(model.id, text);
                     }
                 }
             }

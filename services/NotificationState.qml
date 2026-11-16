@@ -39,6 +39,8 @@ Item {
         if (panelOpen) toastModel.clear();
     }
 
+    onDndChanged: Logger.debug("Notifications", `DND=${dnd}`)
+
     function toggleDnd() {
         dnd = !dnd;
     }
@@ -48,10 +50,11 @@ Item {
     }
 
     function clearHistory() {
+        Logger.debug("Notifications", `Clearing history (${histModel.count} items)`);
         for (let k in notifMap) {
             let n = notifMap[k];
             if (n && typeof n.dismiss === "function") {
-                try { n.dismiss(); } catch(e) {}
+                try { n.dismiss(); } catch(e) { Logger.warn("Notifications", `Dismiss failed for #${k}: ${e}`); }
             }
         }
         notifMap = ({});
@@ -60,12 +63,23 @@ Item {
         toastModel.clear();
     }
 
+    function hasHistoryId(nid) {
+        for (let i = 0; i < histModel.count; i++) {
+            if (histModel.get(i).id === nid) return true;
+        }
+        return false;
+    }
+
     function removeToastById(nid) {
         for (let i = 0; i < toastModel.count; i++) {
             if (toastModel.get(i).id === nid) {
                 toastModel.remove(i);
-                return;
+                break;
             }
+        }
+        if (!hasHistoryId(nid)) {
+            delete notifMap[nid];
+            delete actionMap[nid];
         }
     }
 
@@ -77,8 +91,6 @@ Item {
             }
         }
         removeToastById(nid);
-        delete notifMap[nid];
-        delete actionMap[nid];
     }
 
     function dismissToast(nid) {
@@ -86,11 +98,18 @@ Item {
     }
 
     function dismissHistory(nid) {
+        Logger.debug("Notifications", `Dismissing #${nid}`);
         let n = notifMap[nid];
         if (n && typeof n.dismiss === "function") {
-            try { n.dismiss(); } catch(e) {}
+            try { n.dismiss(); } catch(e) { Logger.warn("Notifications", `Dismiss failed for #${nid}: ${e}`); }
         }
         removeHistoryById(nid);
+    }
+
+    function applyModelProps(model, idx, props) {
+        for (let k in props) {
+            model.setProperty(idx, k, props[k]);
+        }
     }
 
     function invokeAction(nid, actId) {
@@ -105,11 +124,12 @@ Item {
                 try {
                     a.invoke();
                     invoked = true;
-                } catch(e) {}
+                } catch(e) { Logger.warn("Notifications", `Action invoke failed #${nid}:${actId}: ${e}`); }
                 break;
             }
         }
 
+        Logger.debug("Notifications", `Action #${nid}:${actId} invoked=${invoked}`);
         let n = notifMap[nid];
         let app = n ? (n.appName || "") : "";
         let entry = n ? (n.desktopEntry || "") : "";
@@ -135,8 +155,9 @@ Item {
         try {
             n.sendInlineReply(txt);
             sent = true;
-        } catch(e) {}
+        } catch(e) { Logger.warn("Notifications", `Inline reply failed #${nid}: ${e}`); }
 
+        Logger.debug("Notifications", `Inline reply #${nid} sent=${sent}`);
         if (n.resident) {
             removeToastById(nid);
             return sent;
@@ -154,7 +175,7 @@ Item {
             if (!a) continue;
             let id = String(a.identifier !== undefined ? a.identifier : (a.id !== undefined ? a.id : "")).toLowerCase();
             if ((id === "default" || id === "activate" || acts.length === 1) && typeof a.invoke === "function") {
-                try { a.invoke(); } catch(e) {}
+                try { a.invoke(); } catch(e) { Logger.warn("Notifications", `Activate invoke failed #${nid}: ${e}`); }
                 break;
             }
         }
@@ -163,6 +184,7 @@ Item {
         let app = appName || (n ? n.appName : "");
         let entry = desktopEntry || (n ? n.desktopEntry : "");
 
+        Logger.debug("Notifications", `Activated #${nid} (${app || entry || "unknown"})`);
         CompositorAdapter.focusApp(app, entry);
         removeToastById(nid);
     }
@@ -244,7 +266,6 @@ Item {
             let ts = Qt.formatTime(new Date(), "h:mm:ss AP");
             let appIco = n.appIcon ? Quickshell.iconPath(n.appIcon, true) : "";
             let img = n.image || "";
-            let actIcons = !!n.hasActionIcons;
             let hasReply = !!n.hasInlineReply;
             let replyHint = n.inlineReplyPlaceholder || "Reply...";
             let isRes = !!n.resident;
@@ -297,37 +318,27 @@ Item {
                     if (tree.length === 0) tree.push({ body: first.body, time: first.timestamp || ts });
                     tree.unshift({ body: body, time: ts });
 
-                    let treeJson = JSON.stringify(tree);
-                    root.histModel.setProperty(0, "id", nid);
-                    root.histModel.setProperty(0, "repeatCount", c);
-                    root.histModel.setProperty(0, "body", body);
-                    root.histModel.setProperty(0, "timestamp", ts);
-                    root.histModel.setProperty(0, "appIcon", appIco);
-                    root.histModel.setProperty(0, "image", img);
-                    root.histModel.setProperty(0, "hasInlineReply", hasReply);
-                    root.histModel.setProperty(0, "inlineReplyPlaceholder", replyHint);
-                    root.histModel.setProperty(0, "resident", isRes);
-                    root.histModel.setProperty(0, "expireTimeout", expSec);
-                    root.histModel.setProperty(0, "progress", prog);
-                    root.histModel.setProperty(0, "historyTree", treeJson);
-                    root.histModel.setProperty(0, "actionsJson", actsJson);
+                    let patch = {
+                        id: nid,
+                        repeatCount: c,
+                        body: body,
+                        timestamp: ts,
+                        appIcon: appIco,
+                        image: img,
+                        hasInlineReply: hasReply,
+                        inlineReplyPlaceholder: replyHint,
+                        resident: isRes,
+                        expireTimeout: expSec,
+                        progress: prog,
+                        historyTree: JSON.stringify(tree),
+                        actionsJson: actsJson
+                    };
+                    root.applyModelProps(root.histModel, 0, patch);
 
                     // Keep any visible toast in sync when grouped into the latest history entry.
                     for (let i = 0; i < root.toastModel.count; i++) {
                         if (root.toastModel.get(i).id === oldId) {
-                            root.toastModel.setProperty(i, "id", nid);
-                            root.toastModel.setProperty(i, "repeatCount", c);
-                            root.toastModel.setProperty(i, "body", body);
-                            root.toastModel.setProperty(i, "timestamp", ts);
-                            root.toastModel.setProperty(i, "appIcon", appIco);
-                            root.toastModel.setProperty(i, "image", img);
-                            root.toastModel.setProperty(i, "hasInlineReply", hasReply);
-                            root.toastModel.setProperty(i, "inlineReplyPlaceholder", replyHint);
-                            root.toastModel.setProperty(i, "resident", isRes);
-                            root.toastModel.setProperty(i, "expireTimeout", expSec);
-                            root.toastModel.setProperty(i, "progress", prog);
-                            root.toastModel.setProperty(i, "historyTree", treeJson);
-                            root.toastModel.setProperty(i, "actionsJson", actsJson);
+                            root.applyModelProps(root.toastModel, i, patch);
                             return;
                         }
                     }

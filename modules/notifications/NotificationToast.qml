@@ -50,10 +50,10 @@ PanelWindow {
                 required property var modelData
                 required property int index
 
-                readonly property bool autoDismiss: modelData.expireTimeout !== 0
+                readonly property bool autoDismiss: modelData.expireTimeout !== 0 || modelData.urgency !== "critical"
                 readonly property int timeoutMs: (modelData.expireTimeout !== undefined && modelData.expireTimeout > 0)
-                    ? Math.round(modelData.expireTimeout * 1000)
-                    : 6000
+                    ? Math.min(15000, Math.round(modelData.expireTimeout * 1000))
+                    : 5000
                 readonly property bool paused: toastCard.hovered || toastCard.swiping || toastCard.replyFocused
 
                 Layout.fillWidth: true
@@ -89,6 +89,7 @@ PanelWindow {
                 }
 
                 onPausedChanged: {
+                    Logger.debug("NotifToast", `#${modelData.id} paused=${paused} (hover=${hovered})`);
                     if (!paused && autoDismiss) dismiss.restart();
                 }
             }
