@@ -17,6 +17,8 @@ RowLayout {
 
     spacing: Math.round(6 * scaleFactor)
 
+    onVisibleChanged: { if (visible && !radioProbe.running) radioProbe.running = true; }
+
     Process {
         id: radioProbe
         command: ["bash", "-c", "w=$(nmcli radio wifi 2>/dev/null); b=$(rfkill -n -o SOFT list bluetooth 2>/dev/null | head -n1); echo \"${w:-enabled}:${b:-unblocked}\""]

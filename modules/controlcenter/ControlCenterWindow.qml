@@ -44,67 +44,83 @@ PanelWindow {
         right: root.screenMode === 0
     }
 
-    implicitWidth: drawerWidth
-    implicitHeight: drawerHeight
+    // Extend window to the screen edge so panelBox slides completely off-screen without clipping.
+    implicitWidth: drawerWidth + baseMargin
+    implicitHeight: drawerHeight + topMargin
     color: "transparent"
     visible: false
 
-    margins.top: root.screenMode === 2 ? (-root.drawerHeight - root.topMargin) : root.topMargin
-    margins.left: root.screenMode !== 0 ? (root.screenMode === 2 ? root.baseMargin : (-root.drawerWidth - root.baseMargin)) : 0
-    margins.right: root.screenMode === 0 ? (-root.drawerWidth - root.baseMargin) : 0
+    margins.top: 0
+    margins.left: 0
+    margins.right: 0
 
     SpringBehavior {
         id: springPreset
-        mode: root.isTargetScreen ? (root.screenMode === 1 ? "instant" : "default") : "exit"
+        mode: root.isTargetScreen ? "instant" : "exit"
     }
+
+    readonly property real openX: root.screenMode === 0 ? 0 : root.baseMargin
+    readonly property real closedX: root.screenMode === 0 ? (root.drawerWidth + root.baseMargin) : (-root.drawerWidth - root.baseMargin)
 
     SpringAnimation {
         id: animDrop
-        target: root
-        property: "margins.top"
+        target: panelBox
+        property: "y"
         to: root.topMargin
         spring: springPreset.stiffnessVal
         damping: springPreset.dampingVal
         mass: 1.0
         epsilon: 0.5
+        onFinished: {
+            if (root.isTargetScreen) Logger.debug("ControlCenter", `${root.screen ? root.screen.name : "?"} settled open (drop, mode=${screenMode})`);
+        }
     }
 
     SpringAnimation {
         id: animJump
-        target: root
-        property: "margins.top"
+        target: panelBox
+        property: "y"
         to: -root.drawerHeight - root.topMargin
         spring: springPreset.stiffnessVal
         damping: springPreset.dampingVal
         mass: 1.0
-        epsilon: 0.5
+        epsilon: 1.0
         onFinished: {
-            if (!root.isTargetScreen) root.visible = false;
+            if (!root.isTargetScreen) {
+                root.visible = false;
+                Logger.debug("ControlCenter", `${root.screen ? root.screen.name : "?"} settled closed (jump, mode=${screenMode})`);
+            }
         }
     }
 
     SpringAnimation {
         id: animSlideIn
-        target: root
-        property: root.screenMode === 0 ? "margins.right" : "margins.left"
-        to: root.baseMargin
-        spring: springPreset.stiffnessVal
-        damping: springPreset.dampingVal
-        mass: 1.0
-        epsilon: 0.5
-    }
-
-    SpringAnimation {
-        id: animSlideOut
-        target: root
-        property: root.screenMode === 0 ? "margins.right" : "margins.left"
-        to: -root.drawerWidth - root.baseMargin
+        target: panelBox
+        property: "x"
+        to: root.openX
         spring: springPreset.stiffnessVal
         damping: springPreset.dampingVal
         mass: 1.0
         epsilon: 0.5
         onFinished: {
-            if (!root.isTargetScreen) root.visible = false;
+            if (root.isTargetScreen) Logger.debug("ControlCenter", `${root.screen ? root.screen.name : "?"} settled open (slide, mode=${screenMode})`);
+        }
+    }
+
+    SpringAnimation {
+        id: animSlideOut
+        target: panelBox
+        property: "x"
+        to: root.closedX
+        spring: springPreset.stiffnessVal
+        damping: springPreset.dampingVal
+        mass: 1.0
+        epsilon: 1.0
+        onFinished: {
+            if (!root.isTargetScreen) {
+                root.visible = false;
+                Logger.debug("ControlCenter", `${root.screen ? root.screen.name : "?"} settled closed (slide, mode=${screenMode})`);
+            }
         }
     }
 
@@ -122,46 +138,38 @@ PanelWindow {
         if (!isTargetScreen) {
             isExpandedMode = false;
 
-            if (screenMode === 2) {
-                root.margins.left = root.baseMargin;
-                return animJump.start();
-            }
-            if (screenMode === 0 && isAnyPanelOpen && activeScreenMode === 2) {
-                root.margins.right = root.baseMargin;
+            if (screenMode === 2 || (screenMode === 0 && isAnyPanelOpen && activeScreenMode === 2)) {
+                panelBox.x = root.openX;
                 return animJump.start();
             }
 
-            root.margins.top = root.topMargin;
+            panelBox.y = root.topMargin;
             return animSlideOut.start();
         }
 
         let wasVisible = root.visible;
+        let useDrop = (screenMode === 2) || (screenMode === 0 && previousScreenName !== "" && previousScreenName !== (root.screen ? root.screen.name : "") && prevScreenMode === 2);
+
+        if (useDrop) {
+            panelBox.x = root.openX;
+            if (!wasVisible) panelBox.y = -root.drawerHeight - root.topMargin;
+            root.visible = true;
+            animDrop.start();
+            return;
+        }
+
+        panelBox.y = root.topMargin;
+        if (!wasVisible) panelBox.x = root.closedX;
         root.visible = true;
-
-        if (screenMode === 2) {
-            root.margins.left = root.baseMargin;
-            if (!wasVisible) root.margins.top = -root.drawerHeight - root.topMargin;
-            return animDrop.start();
-        }
-
-        if (screenMode === 0 && previousScreenName !== "" && previousScreenName !== (root.screen ? root.screen.name : "") && prevScreenMode === 2) {
-            root.margins.right = root.baseMargin;
-            if (!wasVisible) root.margins.top = -root.drawerHeight - root.topMargin;
-            return animDrop.start();
-        }
-
-        root.margins.top = root.topMargin;
-        if (!wasVisible) {
-            if (screenMode === 0) root.margins.right = -root.drawerWidth - root.baseMargin;
-            else root.margins.left = -root.drawerWidth - root.baseMargin;
-        }
-
         animSlideIn.start();
     }
 
     Rectangle {
         id: panelBox
-        anchors.fill: parent
+        width: root.drawerWidth
+        height: root.drawerHeight
+        x: root.closedX
+        y: root.screenMode === 2 ? (-root.drawerHeight - root.topMargin) : root.topMargin
         radius: Metrics.cornerRadius
         color: Qt.alpha(Theme.background, Metrics.drawerOpacity)
         border.color: Qt.alpha(Theme.outline_variant, 0.8)

@@ -6,6 +6,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import "./services"
 import "./modules/bar"
 import "./modules/controlcenter"
@@ -51,6 +52,31 @@ Scope {
         delegate: BarWindow {
             required property var modelData
             screen: modelData
+        }
+    }
+
+    // Declared before ControlCenterWindow so clicking anywhere outside the drawer closes it.
+    Variants {
+        model: Quickshell.screens
+        delegate: PanelWindow {
+            required property var modelData
+            screen: modelData
+            visible: shellRoot.panelOpen
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "quickshell-drawer-backdrop"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            WlrLayershell.exclusionMode: ExclusionMode.Ignore
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: "transparent"
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                onClicked: {
+                    Logger.debug("Drawer", "Backdrop click -> close");
+                    shellRoot.panelOpen = false;
+                }
+            }
         }
     }
 
@@ -101,8 +127,12 @@ Scope {
             shellRoot.prevScr = shellRoot.actScr ? shellRoot.actScr : tgt;
             shellRoot.actScr = tgt;
             shellRoot.panelOpen = true;
+            Logger.debug("Drawer", `IPC open -> ${tgt}`);
         }
-        function close() { shellRoot.panelOpen = false; }
+        function close() {
+            shellRoot.panelOpen = false;
+            Logger.debug("Drawer", "IPC close");
+        }
     }
 
     IpcHandler {
@@ -157,7 +187,7 @@ Scope {
 
     IpcHandler {
         target: "theme"
-        function reload() { Quickshell.reload(""); }
+        function reload() { Logger.info("Theme", "Reloading Quickshell"); Quickshell.reload(""); }
     }
 
     function togglePanel(targetScreen) {

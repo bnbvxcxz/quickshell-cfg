@@ -39,6 +39,8 @@ Rectangle {
             font.bold: Typography.globalBold
             font.weight: Typography.globalWeight
             font.italic: Typography.globalItalic
+            Layout.preferredWidth: Math.round(18 * root.scaleFactor)
+            horizontalAlignment: Text.AlignHCenter
 
             MouseArea {
                 anchors.fill: parent
