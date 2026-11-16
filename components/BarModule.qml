@@ -24,7 +24,7 @@ Rectangle {
     signal middleClicked()
     signal wheelMoved(int steps)
 
-    implicitHeight: Metrics.scaled(Metrics.baseBarHeight, scaleFactor)
+    implicitHeight: Math.max(12, Metrics.scaled(Metrics.baseBarHeight - (Metrics.baseModuleGapY * 2), scaleFactor))
     implicitWidth: contentLayout.implicitWidth + (horizontalPadding * 2)
     radius: Metrics.moduleRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Metrics.moduleRadius, scaleFactor)
     color: moduleColor
@@ -33,8 +33,8 @@ Rectangle {
 
     Layout.alignment: Qt.AlignVCenter
     Layout.fillHeight: false
-    Layout.topMargin: 0
-    Layout.bottomMargin: 0
+    Layout.topMargin: Metrics.scaled(Metrics.baseModuleGapY, scaleFactor)
+    Layout.bottomMargin: Metrics.scaled(Metrics.baseModuleGapY, scaleFactor)
     Layout.leftMargin: visible ? 1 : 0
     Layout.rightMargin: visible ? 1 : 0
 

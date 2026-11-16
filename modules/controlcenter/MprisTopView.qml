@@ -38,6 +38,7 @@ ColumnLayout {
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 asynchronous: true
+                sourceSize: Qt.size(Math.max(1, Math.round(width * 2)), Math.max(1, Math.round(height * 2)))
                 cache: true
                 visible: status === Image.Ready && source !== ""
             }
@@ -73,7 +74,7 @@ ColumnLayout {
     MarqueeText {
         Layout.fillWidth: true
         Layout.preferredHeight: Math.round(16 * root.scaleFactor)
-        readonly property string timeStr: MediaState.trackLen > 0 ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen)) : "--:--"
+        readonly property string timeStr: MediaState.timeSummary
         text: MediaState.cleanArtist ? `${MediaState.cleanArtist}  •  ${timeStr}` : timeStr
         color: Theme.on_surface_variant
         pixelSize: Typography.sizeSmall(root.scaleFactor)
@@ -85,79 +86,39 @@ ColumnLayout {
         spacing: Math.round(20 * root.scaleFactor)
         Layout.bottomMargin: Math.round(2 * root.scaleFactor)
 
-        Text {
+        IconButton {
             text: "󰒟"
             opacity: MediaState.canShuffle ? 1.0 : 0.4
             color: MediaState.isShuffled ? Theme.primary : Theme.outline
-            font.family: Typography.family
-            font.pixelSize: Math.round(15 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            Behavior on color { ColorAnimation { duration: 120 } }
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.toggleShuffle()
-            }
+            pixelSize: Math.round(15 * root.scaleFactor)
+            onClicked: MediaState.toggleShuffle()
         }
 
-        Text {
+        IconButton {
             text: "󰒮"
-            color: Theme.primary
-            font.family: Typography.family
-            font.pixelSize: Math.round(18 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.previous()
-            }
+            pixelSize: Math.round(18 * root.scaleFactor)
+            onClicked: MediaState.previous()
         }
 
-        Text {
+        IconButton {
             text: MediaState.isPlaying ? "󰏤" : "󰐊"
             color: MediaState.isPlaying ? Theme.primary : Theme.tertiary
-            font.family: Typography.family
-            font.pixelSize: Math.round(20 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            Behavior on color { ColorAnimation { duration: 120 } }
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.togglePlay()
-            }
+            pixelSize: Math.round(20 * root.scaleFactor)
+            onClicked: MediaState.togglePlay()
         }
 
-        Text {
+        IconButton {
             text: "󰒭"
-            color: Theme.primary
-            font.family: Typography.family
-            font.pixelSize: Math.round(18 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.next()
-            }
+            pixelSize: Math.round(18 * root.scaleFactor)
+            onClicked: MediaState.next()
         }
 
-        Text {
+        IconButton {
             text: MediaState.loopMode === 1 ? "󰑘" : "󰑖"
             opacity: MediaState.canLoop ? 1.0 : 0.4
             color: MediaState.loopMode === 1 ? Theme.tertiary : (MediaState.loopMode === 2 ? Theme.primary : Theme.outline)
-            font.family: Typography.family
-            font.pixelSize: Math.round(15 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            Behavior on color { ColorAnimation { duration: 120 } }
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.cycleLoop()
-            }
+            pixelSize: Math.round(15 * root.scaleFactor)
+            onClicked: MediaState.cycleLoop()
         }
     }
 }

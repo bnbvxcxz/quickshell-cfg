@@ -10,9 +10,7 @@ import "../../components"
 BarModule {
     id: root
 
-    readonly property string timeStr: MediaState.trackLen > 0
-        ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen))
-        : (MediaState.isPlaying ? MediaState.formatTime(MediaState.trackPos) : "--:--")
+    readonly property string timeStr: MediaState.timeSummary
 
     visible: MediaState.hasMedia
     Layout.preferredWidth: visible ? -1 : 0

@@ -35,6 +35,7 @@ RowLayout {
             fillMode: Image.PreserveAspectFit
             smooth: true
             asynchronous: true
+            sourceSize: Qt.size(Math.max(1, Math.round(width * 2)), Math.max(1, Math.round(height * 2)))
             cache: true
             visible: status === Image.Ready && source !== ""
         }
@@ -81,7 +82,7 @@ RowLayout {
         }
 
         Text {
-            text: MediaState.trackLen > 0 ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen)) : "--:--"
+            text: MediaState.timeSummary
             color: Theme.outline
             font.family: Typography.family
             font.pixelSize: Math.max(8, Typography.sizeSmall(root.scaleFactor) - 1)
@@ -94,47 +95,23 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
         spacing: Math.round(10 * root.scaleFactor)
 
-        Text {
+        IconButton {
             text: "󰒮"
-            color: Theme.primary
-            font.family: Typography.family
-            font.pixelSize: Math.round(17 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.previous()
-            }
+            pixelSize: Math.round(17 * root.scaleFactor)
+            onClicked: MediaState.previous()
         }
 
-        Text {
+        IconButton {
             text: MediaState.isPlaying ? "󰏤" : "󰐊"
             color: MediaState.isPlaying ? Theme.primary : Theme.tertiary
-            Behavior on color { ColorAnimation { duration: 120 } }
-            font.family: Typography.family
-            font.pixelSize: Math.round(22 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.togglePlay()
-            }
+            pixelSize: Math.round(22 * root.scaleFactor)
+            onClicked: MediaState.togglePlay()
         }
 
-        Text {
+        IconButton {
             text: "󰒭"
-            color: Theme.primary
-            font.family: Typography.family
-            font.pixelSize: Math.round(17 * root.scaleFactor)
-            font.bold: Typography.globalBold
-            font.italic: Typography.globalItalic
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: MediaState.next()
-            }
+            pixelSize: Math.round(17 * root.scaleFactor)
+            onClicked: MediaState.next()
         }
     }
 }

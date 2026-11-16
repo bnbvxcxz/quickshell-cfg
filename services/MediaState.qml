@@ -197,15 +197,20 @@ Item {
     function togglePlay() {
         if (!activePlayer) return;
         promotePlayer(activePlayer.identity || "");
+        Logger.debug("Media", `Toggle play/pause -> ${activePlayer.identity || "player"}`);
         activePlayer.togglePlaying();
     }
 
     function next() {
-        if (activePlayer && activePlayer.canGoNext) activePlayer.next();
+        if (!activePlayer || !activePlayer.canGoNext) return;
+        Logger.debug("Media", `Next track -> ${activePlayer.identity || "player"}`);
+        activePlayer.next();
     }
 
     function previous() {
-        if (activePlayer && activePlayer.canGoPrevious) activePlayer.previous();
+        if (!activePlayer || !activePlayer.canGoPrevious) return;
+        Logger.debug("Media", `Previous track -> ${activePlayer.identity || "player"}`);
+        activePlayer.previous();
     }
 
     function toggleShuffle() {
@@ -258,6 +263,10 @@ Item {
             root.syncTimers();
         }
     }
+
+    readonly property string timeSummary: trackLen > 0
+        ? (formatTime(trackPos) + " / " + formatTime(trackLen))
+        : (isPlaying ? formatTime(trackPos) : "--:--")
 
     function formatTime(sec) {
         if (isNaN(sec) || sec <= 0) return "0:00";

@@ -1,5 +1,5 @@
-// Status bar network status module.
-// Displays Wi-Fi signal or Ethernet icon and opens nmtui on click.
+// Status bar network indicator (Ethernet or Wi-Fi).
+// Displays active connection glyph and SSID/interface, opening nmtui on click.
 
 import QtQuick
 import "../../config"
@@ -9,21 +9,15 @@ import "../../components"
 BarModule {
     id: root
 
-    onClicked: { Logger.debug("Network", "Click -> open nmtui"); HardwareState.runCmd([Commands.terminal, "--class", "quickshell_nmtui", "-e", "nmtui"]); }
-
-    readonly property bool isDisconnected: SystemState.netName === "disconnected"
-    readonly property color netColor: isDisconnected ? Theme.error : Theme.primary
+    onClicked: { Logger.debug("Network", `Click -> open ${Commands.netManager}`); HardwareState.runCmd([Commands.terminal, "--class", "quickshell_nmtui", "-e", Commands.netManager]); }
 
     BarModule.Icon {
         text: SystemState.netIcon
-        color: root.netColor
         scaleFactor: root.scaleFactor
     }
 
     BarModule.Label {
         text: SystemState.netName
-        color: root.netColor
-        visible: text.length > 0
         scaleFactor: root.scaleFactor
     }
 }

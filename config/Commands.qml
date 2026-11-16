@@ -9,6 +9,7 @@ QtObject {
 
     readonly property string terminal: "kitty"
     readonly property string mixer: "pavucontrol"
+    readonly property string netManager: "nmtui"
 
     readonly property string scriptsDir: Qt.resolvedUrl("../scripts").toString().replace(/^file:\/\//, "")
     readonly property string checkUpdatesScript: scriptsDir + "/check_updates.sh"

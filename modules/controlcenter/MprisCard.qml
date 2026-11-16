@@ -30,6 +30,7 @@ Rectangle {
         source: MediaState.artSource
         visible: false
         asynchronous: true
+        sourceSize: Qt.size(256, 256)
         cache: true
     }
 

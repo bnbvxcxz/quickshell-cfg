@@ -26,18 +26,19 @@ Item {
     readonly property int weightMedium: globalBold ? 700 : 500
     readonly property int weightBold: 700
 
+    function resolveScale(scale: real): real {
+        return (scale !== undefined && !isNaN(scale) && scale > 0) ? scale : Metrics.currentScale;
+    }
+
     function size(scale: real): int {
-        let s = (scale !== undefined && !isNaN(scale) && scale > 0) ? scale : Metrics.currentScale;
-        return Math.round(baseSize * s);
+        return Math.round(baseSize * resolveScale(scale));
     }
 
     function sizeSmall(scale: real): int {
-        let s = (scale !== undefined && !isNaN(scale) && scale > 0) ? scale : Metrics.currentScale;
-        return Math.max(8, Math.round((baseSize - 1.5) * s));
+        return Math.max(8, Math.round((baseSize - 1.5) * resolveScale(scale)));
     }
 
     function sizeLarge(scale: real): int {
-        let s = (scale !== undefined && !isNaN(scale) && scale > 0) ? scale : Metrics.currentScale;
-        return Math.round((baseSize + 2) * s);
+        return Math.round((baseSize + 2) * resolveScale(scale));
     }
 }

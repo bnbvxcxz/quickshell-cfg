@@ -12,9 +12,7 @@ RowLayout {
     signal requestExpand()
     property real scaleFactor: 1.0
 
-    readonly property string timeString: MediaState.trackLen > 0
-    ? (MediaState.formatTime(MediaState.trackPos) + " / " + MediaState.formatTime(MediaState.trackLen))
-    : (MediaState.isPlaying ? MediaState.formatTime(MediaState.trackPos) : "--:--")
+    readonly property string timeString: MediaState.timeSummary
 
     anchors.fill: parent
     anchors.leftMargin: Math.round(12 * scaleFactor)

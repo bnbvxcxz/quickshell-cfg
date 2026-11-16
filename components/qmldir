@@ -1,4 +1,5 @@
 BarModule 1.0 BarModule.qml
+IconButton 1.0 IconButton.qml
 MarqueeText 1.0 MarqueeText.qml
 SpringBehavior 1.0 SpringBehavior.qml
 SliderRow 1.0 SliderRow.qml

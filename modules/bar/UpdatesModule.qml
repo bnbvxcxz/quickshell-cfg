@@ -60,7 +60,6 @@ BarModule {
 
     PopupWindow {
         id: updatePopupWindow
-        anchor.window: root.barWindowRef
         anchor.item: root
         anchor.edges: Edges.Bottom
         anchor.gravity: Edges.Bottom
@@ -95,72 +94,38 @@ BarModule {
                 anchors.centerIn: parent
                 spacing: Metrics.scaled(4, root.scaleFactor)
 
-                RowLayout {
-                    spacing: Metrics.scaled(18, root.scaleFactor)
-                    Text {
-                        text: "arch:"
-                        color: Theme.on_surface_variant
-                        font.family: Typography.family
-                        font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                        font.bold: Typography.globalBold
-                        font.weight: Typography.globalWeight
-                        font.italic: Typography.globalItalic
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: `${SystemState.updArch}`
-                        color: SystemState.updArch > 0 ? root.colorForState(SystemState.archState, Theme.primary) : Theme.outline
-                        font.family: Typography.family
-                        font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                        font.bold: Typography.globalBold
-                        font.weight: Typography.globalWeight
-                        font.italic: Typography.globalItalic
-                    }
-                }
+                Repeater {
+                    model: [
+                        { label: "arch:", count: SystemState.updArch, state: SystemState.archState, fallback: Theme.primary },
+                        { label: "aur:", count: SystemState.updAur, state: SystemState.aurState, fallback: Theme.tertiary },
+                        { label: "flatpak:", count: SystemState.updFlatpak, state: SystemState.flatpakState, fallback: Theme.secondary }
+                    ]
 
-                RowLayout {
-                    spacing: Metrics.scaled(18, root.scaleFactor)
-                    Text {
-                        text: "aur:"
-                        color: Theme.on_surface_variant
-                        font.family: Typography.family
-                        font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                        font.bold: Typography.globalBold
-                        font.weight: Typography.globalWeight
-                        font.italic: Typography.globalItalic
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: `${SystemState.updAur}`
-                        color: SystemState.updAur > 0 ? root.colorForState(SystemState.aurState, Theme.tertiary) : Theme.outline
-                        font.family: Typography.family
-                        font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                        font.bold: Typography.globalBold
-                        font.weight: Typography.globalWeight
-                        font.italic: Typography.globalItalic
-                    }
-                }
+                    RowLayout {
+                        required property var modelData
+                        spacing: Metrics.scaled(18, root.scaleFactor)
 
-                RowLayout {
-                    spacing: Metrics.scaled(18, root.scaleFactor)
-                    Text {
-                        text: "flatpak:"
-                        color: Theme.on_surface_variant
-                        font.family: Typography.family
-                        font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                        font.bold: Typography.globalBold
-                        font.weight: Typography.globalWeight
-                        font.italic: Typography.globalItalic
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: `${SystemState.updFlatpak}`
-                        color: SystemState.updFlatpak > 0 ? root.colorForState(SystemState.flatpakState, Theme.secondary) : Theme.outline
-                        font.family: Typography.family
-                        font.pixelSize: Typography.sizeSmall(root.scaleFactor)
-                        font.bold: Typography.globalBold
-                        font.weight: Typography.globalWeight
-                        font.italic: Typography.globalItalic
+                        Text {
+                            text: modelData.label
+                            color: Theme.on_surface_variant
+                            font.family: Typography.family
+                            font.pixelSize: Typography.sizeSmall(root.scaleFactor)
+                            font.bold: Typography.globalBold
+                            font.weight: Typography.globalWeight
+                            font.italic: Typography.globalItalic
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        Text {
+                            text: `${modelData.count}`
+                            color: modelData.count > 0 ? root.colorForState(modelData.state, modelData.fallback) : Theme.outline
+                            font.family: Typography.family
+                            font.pixelSize: Typography.sizeSmall(root.scaleFactor)
+                            font.bold: Typography.globalBold
+                            font.weight: Typography.globalWeight
+                            font.italic: Typography.globalItalic
+                        }
                     }
                 }
             }
