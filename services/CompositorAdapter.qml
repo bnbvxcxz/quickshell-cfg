@@ -27,6 +27,8 @@ Item {
     readonly property string activeWinTitle: backend ? backend.activeWinTitle : ""
     readonly property var workspaces: backend ? backend.workspaces : []
 
+    onActiveWsIdChanged: Logger.debug("Compositor", `Focused workspace -> ${activeWsId}${focusMon ? " (" + focusMon + ")" : ""}`)
+
     function dispatchWorkspace(id) { if (backend) backend.dispatchWorkspace(id); }
     function stepWorkspace(dir) { if (backend) backend.stepWorkspace(dir); }
     function focusApp(appName, desktopEntry) { if (backend) backend.focusApp(appName, desktopEntry); }

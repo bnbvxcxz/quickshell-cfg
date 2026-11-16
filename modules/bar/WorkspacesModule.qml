@@ -11,11 +11,12 @@ Rectangle {
     id: root
 
     property real scaleFactor: 1.0
+    property string screenName: ""
     property color activeBg: Theme.secondary
     property color activeFg: Theme.on_secondary
     property color inactiveFg: Theme.secondary
 
-    implicitHeight: Metrics.scaled(Metrics.baseBarHeight, scaleFactor)
+    implicitHeight: Math.max(12, Metrics.scaled(Metrics.baseBarHeight - (Metrics.baseModuleGapY * 2), scaleFactor))
     implicitWidth: wsRow.implicitWidth
     radius: Metrics.moduleRadius < 0 ? Math.round(implicitHeight / 2) : Metrics.scaled(Metrics.moduleRadius, scaleFactor)
     color: Theme.surface_container_low
@@ -24,22 +25,43 @@ Rectangle {
 
     Layout.alignment: Qt.AlignVCenter
     Layout.fillHeight: false
-    Layout.topMargin: 0
-    Layout.bottomMargin: 0
+    Layout.topMargin: Metrics.scaled(Metrics.baseModuleGapY, scaleFactor)
+    Layout.bottomMargin: Metrics.scaled(Metrics.baseModuleGapY, scaleFactor)
     Layout.leftMargin: 1
     Layout.rightMargin: 1
 
     property Item activeItem: null
+    property int lastLoggedWsId: -1
     property int scrollAcc: 0
+
+    // Niri workspace indices are 1-based per output, so filter by screen when output metadata exists.
+    readonly property var wsList: {
+        let all = CompositorAdapter.workspaces || [];
+        if (!root.screenName || all.length === 0) return all;
+        let out = [];
+        for (let i = 0; i < all.length; i++) {
+            if (all[i].output === root.screenName) out.push(all[i]);
+        }
+        return out.length > 0 ? out : all;
+    }
 
     function updateActiveTarget() {
         let targetId = CompositorAdapter.activeWsId;
         for (let i = 0; i < wsRepeater.count; i++) {
             let child = wsRepeater.itemAt(i);
-            if (child && child.wsId === targetId) {
+            if (child && child.isActive) {
                 root.activeItem = child;
+                if (child.wsId !== root.lastLoggedWsId) {
+                    root.lastLoggedWsId = child.wsId;
+                    Logger.debug("Workspaces", `Active target -> ws=${child.wsId} (activeWsId=${targetId}, screen=${root.screenName || "?"})`);
+                }
                 return;
             }
+        }
+        root.activeItem = null;
+        if (root.lastLoggedWsId !== 0) {
+            root.lastLoggedWsId = 0;
+            Logger.debug("Workspaces", `Active target -> none (activeWsId=${targetId}, screen=${root.screenName || "?"}, count=${wsRepeater.count})`);
         }
     }
 
@@ -56,7 +78,7 @@ Rectangle {
     }
 
     function stepRelative(dir) {
-        let list = CompositorAdapter.workspaces;
+        let list = root.wsList;
         if (!list || list.length <= 1) return CompositorAdapter.stepWorkspace(dir);
 
         let curId = CompositorAdapter.activeWsId;
@@ -77,6 +99,7 @@ Rectangle {
     Connections {
         target: CompositorAdapter
         function onActiveWsIdChanged() { root.updateActiveTarget() }
+        function onFocusMonChanged() { root.updateActiveTarget() }
         function onWorkspacesChanged() { Qt.callLater(root.updateActiveTarget) }
     }
 
@@ -131,7 +154,7 @@ Rectangle {
 
         Repeater {
             id: wsRepeater
-            model: CompositorAdapter.workspaces
+            model: root.wsList
 
             onCountChanged: Qt.callLater(root.updateActiveTarget)
 
@@ -140,6 +163,7 @@ Rectangle {
                 required property var modelData
                 readonly property int wsId: modelData.id
                 property bool isActive: CompositorAdapter.activeWsId === wsId
+                    && (!modelData.output || !CompositorAdapter.focusMon || modelData.output === CompositorAdapter.focusMon)
                 property bool isOccupied: modelData.windows > 0
 
                 readonly property int hPad: Math.round(8 * root.scaleFactor)

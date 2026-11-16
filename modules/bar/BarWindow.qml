@@ -63,14 +63,15 @@ PanelWindow {
         RowLayout {
             id: leftBarRow
             anchors.left: parent.left
-            anchors.leftMargin: Metrics.scaled(2, barWindow.screenScale)
+            anchors.leftMargin: Metrics.scaled(Metrics.baseBarMarginX, barWindow.screenScale)
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Metrics.scaled(2, barWindow.screenScale)
+            spacing: Metrics.scaled(Metrics.baseModuleGapX, barWindow.screenScale)
 
             ClockModule { scaleFactor: barWindow.screenScale }
 
             WorkspacesModule {
                 scaleFactor: barWindow.screenScale
+                screenName: barWindow.screen ? barWindow.screen.name : ""
                 activeBg: barWindow.activeWsBg
                 activeFg: barWindow.activeWsFg
                 inactiveFg: barWindow.inactiveWsFg
@@ -90,9 +91,9 @@ PanelWindow {
         RowLayout {
             id: rightBarRow
             anchors.right: parent.right
-            anchors.rightMargin: Metrics.scaled(2, barWindow.screenScale)
+            anchors.rightMargin: Metrics.scaled(Metrics.baseBarMarginX, barWindow.screenScale)
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Metrics.scaled(2, barWindow.screenScale)
+            spacing: Metrics.scaled(Metrics.baseModuleGapX, barWindow.screenScale)
 
             UpdatesModule {
                 scaleFactor: barWindow.screenScale
