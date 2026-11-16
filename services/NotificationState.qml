@@ -45,9 +45,6 @@ Item {
         dnd = !dnd;
     }
 
-    function clearToasts() {
-        toastModel.clear();
-    }
 
     function clearHistory() {
         Logger.debug("Notifications", `Clearing history (${histModel.count} items)`);

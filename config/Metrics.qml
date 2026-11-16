@@ -74,18 +74,6 @@ Item {
         return screens.length > 0 ? scaleFor(screens[0]) : 1.0;
     }
 
-    readonly property int barHeight: Math.round(baseBarHeight * currentScale)
-    readonly property int moduleHeight: Math.max(12, Math.round((baseBarHeight - (baseModuleGapY * 2)) * currentScale))
-    readonly property int modulePadding: Math.round(baseModulePadding * currentScale)
-    readonly property int moduleSpacing: Math.round(baseSpacing * currentScale)
-    readonly property int trayIconSize: Math.max(16, Math.round(barHeight - (5 * currentScale)))
-
-    readonly property int padding: moduleSpacing
-    readonly property int iconSize: trayIconSize
-
-    readonly property int drawerWidth: Math.round(baseDrawerWidth * currentScale)
-    readonly property int drawerHeight: Math.round(baseDrawerHeight * currentScale)
-
     function scaled(value, scale) {
         return Math.round(value * (scale || currentScale));
     }

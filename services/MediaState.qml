@@ -166,17 +166,6 @@ Item {
         return formatArtist(a ? a : activePlayer.identity);
     }
 
-    readonly property string cleanAlbum: {
-        if (!activePlayer) return "";
-        let alb = String(activePlayer.trackAlbum || "").trim();
-        if (!alb && activePlayer.metadata) alb = String(activePlayer.metadata["xesam:album"] || "").trim();
-        return alb;
-    }
-
-    readonly property string displayString: {
-        if (!cleanTitle) return "";
-        return cleanTitle + (cleanArtist ? (" - " + cleanArtist) : "");
-    }
 
     readonly property string artSource: {
         if (!activePlayer) return "";

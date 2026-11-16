@@ -20,16 +20,12 @@ Item {
 
     readonly property real volume: (sink && sink.audio) ? Math.max(0.0, Math.min(1.0, sink.audio.volume)) : 0.0
     readonly property bool isMuted: (sink && sink.audio) ? !!sink.audio.muted : false
-    readonly property bool isMicMuted: (source && source.audio) ? !!source.audio.muted : false
 
     property real brightness: 0.5
     property bool isCapsOn: false
 
     signal osdTriggered(string type, real value, string icon, bool muted)
 
-    function triggerOsd(type, value, icon, muted) {
-        root.osdTriggered(type, value, icon, muted);
-    }
 
     readonly property string volumeIcon: {
         if (root.isMuted || root.volume <= 0.0) return "󰖁";

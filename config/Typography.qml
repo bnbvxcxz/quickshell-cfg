@@ -38,7 +38,4 @@ Item {
         return Math.max(8, Math.round((baseSize - 1.5) * resolveScale(scale)));
     }
 
-    function sizeLarge(scale: real): int {
-        return Math.round((baseSize + 2) * resolveScale(scale));
-    }
 }
