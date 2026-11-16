@@ -92,7 +92,7 @@ PanelWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    text: (root.isMute && root.type !== "capslock") ? "󰖁" : root.ico
+                    text: (root.isMute && root.type === "volume") ? "󰖁" : root.ico
                     color: (root.isMute && root.type !== "capslock") ? Theme.error : Theme.primary
                     font.family: Typography.family
                     font.pixelSize: Metrics.scaled(15, root.s)
