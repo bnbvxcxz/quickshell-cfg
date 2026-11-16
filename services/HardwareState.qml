@@ -59,6 +59,7 @@ Item {
     function runCmd(cmd) {
         if (!cmd) return;
         let args = Array.isArray(cmd) ? cmd : ["bash", "-c", cmd];
+        Logger.debug("Hardware", `runCmd: ${args.join(" ")}`);
         if (!cmdRunner.running) {
             cmdRunner.command = args;
             cmdRunner.running = true;
@@ -100,6 +101,7 @@ Item {
         let clamped = Math.max(0.0, Math.min(1.0, val));
         sink.audio.volume = clamped;
         if (sink.audio.muted && clamped > 0.0) sink.audio.muted = false;
+        Logger.debug("Hardware", `Volume -> ${Math.round(clamped * 100)}%`);
         if (show) root.osdTriggered("volume", clamped, root.volumeIcon, false);
     }
 
@@ -120,12 +122,14 @@ Item {
         let next = cur / 100.0;
         sink.audio.volume = next;
         if (sink.audio.muted && cur > 0) sink.audio.muted = false;
+        Logger.debug("Hardware", `Volume step=${delta} -> ${cur}%`);
         if (show) root.osdTriggered("volume", next, root.volumeIcon, sink.audio.muted);
     }
 
     function toggleMute(show = true) {
         if (!sink || !sink.audio) return;
         sink.audio.muted = !sink.audio.muted;
+        Logger.debug("Hardware", `Volume muted=${sink.audio.muted}`);
         if (show) root.osdTriggered("volume", root.volume, root.volumeIcon, sink.audio.muted);
     }
 
@@ -134,6 +138,7 @@ Item {
         root.brightness = pct / 100.0;
         inputCooldown.restart();
         briSyncTimer.restart();
+        Logger.debug("Hardware", `Brightness -> ${pct}%`);
         if (show) root.osdTriggered("brightness", root.brightness, root.brightnessIcon, false);
     }
 
@@ -159,17 +164,20 @@ Item {
         root.brightness = cur / 100.0;
         inputCooldown.restart();
         briSyncTimer.restart();
+        Logger.debug("Hardware", `Brightness step=${delta} -> ${cur}%`);
         if (show) root.osdTriggered("brightness", root.brightness, root.brightnessIcon, false);
     }
 
     function toggleMicMute(show = true) {
         if (!source || !source.audio) return;
         source.audio.muted = !source.audio.muted;
+        Logger.debug("Hardware", `Mic muted=${source.audio.muted}`);
         if (show) root.osdTriggered("microphone", 1.0, source.audio.muted ? "󰍭" : "󰍬", source.audio.muted);
     }
 
     function toggleCaps() {
         root.isCapsOn = !root.isCapsOn;
+        Logger.debug("Hardware", `CapsLock=${root.isCapsOn}`);
         root.osdTriggered("capslock", root.isCapsOn ? 1.0 : 0.0, "󰪛", false);
     }
 

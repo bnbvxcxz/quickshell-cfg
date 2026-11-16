@@ -59,6 +59,7 @@ Item {
 
     function dispatchWorkspace(id) {
         if (id === undefined || id === null) return;
+        Logger.debug("Hyprland", `dispatchWorkspace -> ${id}`);
         if (root.useLuaDispatch) {
             return runLuaDispatch(`hl.dsp.focus({ workspace = "${id}" })`);
         }
@@ -68,6 +69,7 @@ Item {
     function stepWorkspace(dir) {
         if (!dir) return;
         let target = dir > 0 ? "m+1" : "m-1";
+        Logger.debug("Hyprland", `stepWorkspace -> ${target}`);
         if (root.useLuaDispatch) {
             return runLuaDispatch(`hl.dsp.focus({ workspace = "${target}" })`);
         }
@@ -82,6 +84,7 @@ Item {
         let base = parts[parts.length - 1].replace(/[^a-zA-Z0-9_-]/g, "");
         if (!base) return;
 
+        Logger.debug("Hyprland", `focusApp -> ${base}`);
         let regex = `class:(?i)^(.*${base}.*)$`;
         if (root.useLuaDispatch) {
             return runLuaDispatch(`hl.dsp.focus({ window = "${regex}" })`);

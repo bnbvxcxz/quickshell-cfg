@@ -15,11 +15,13 @@ Item {
 
     function simulateBattery(pct, status) {
         batTestActive = true;
+        Logger.debug("System", `Simulate battery pct=${pct} status=${status || "Discharging"}`);
         setBatteryState(parseInt(pct) || 0, status || "Discharging");
     }
 
     function simulateWifi(ssid, signal) {
         netTestActive = true;
+        Logger.debug("System", `Simulate wifi ssid=${ssid} signal=${signal}`);
         setWifiState(ssid, parseInt(signal) || 0);
     }
 
@@ -28,6 +30,7 @@ Item {
         netIcon = "󰈀";
         netName = ip || "10.0.0.2/24";
         netTxt = `󰈀   ${netName}`;
+        Logger.debug("System", `Simulate ethernet ip=${netName}`);
     }
 
     function simulateUpdates(arch, aur, flatpak) {
@@ -37,11 +40,13 @@ Item {
         totAur = 50;
         updFlatpak = parseInt(flatpak) || 0;
         totFlatpak = 20;
+        Logger.debug("System", `Simulate updates arch=${updArch} aur=${updAur} flatpak=${updFlatpak}`);
     }
 
     function resetSimulation() {
         batTestActive = false;
         netTestActive = false;
+        Logger.debug("System", "Reset simulation to live state");
         syncUPower();
         syncNetwork();
         refreshUpdates();
@@ -134,8 +139,12 @@ Item {
         for (let i = 0; i < devs.length; i++) {
             let d = devs[i];
             if (d && d.type === DeviceType.Wired && d.connected) {
+                let nextName = d.name || "Ethernet";
+                if (root.netName !== nextName || root.netIcon !== "󰈀") {
+                    Logger.debug("System", `Network -> wired (${nextName})`);
+                }
                 root.netIcon = "󰈀";
-                root.netName = d.name || "Ethernet";
+                root.netName = nextName;
                 root.netTxt = `󰈀   ${root.netName}`;
                 return;
             }
@@ -184,6 +193,9 @@ Item {
 
     function setBatteryState(cap, stat) {
         let clamped = Math.max(0, Math.min(100, cap));
+        if (!root.batPresent || root.batPct !== clamped || root.batStatus !== stat) {
+            Logger.debug("System", `Battery -> ${clamped}% (${stat})`);
+        }
         root.batPresent = true;
         root.batPct = clamped;
         root.batStatus = stat;
@@ -202,6 +214,7 @@ Item {
     function setWifiState(ssid, sig) {
         let clean = String(ssid || "").trim();
         if (!clean || clean === "disconnected" || sig <= 0) {
+            if (root.netName !== "disconnected") Logger.debug("System", "Network -> disconnected");
             root.netIcon = "󰤭";
             root.netName = "disconnected";
             root.netTxt = "󰤭   disconnected";
@@ -213,13 +226,19 @@ Item {
         else if (sig >= 50) ico = "󰤥";
         else if (sig >= 25) ico = "󰤢";
 
+        if (root.netName !== clean || root.netIcon !== ico) {
+            Logger.debug("System", `Network -> wifi (${clean}, ${sig}%)`);
+        }
         root.netIcon = ico;
         root.netName = clean;
         root.netTxt = `${ico}   ${clean}`;
     }
 
     function refreshUpdates() {
-        if (!updProc.running) updProc.running = true;
+        if (!updProc.running) {
+            Logger.debug("System", "Refreshing package updates");
+            updProc.running = true;
+        }
     }
 
     Process {
@@ -239,6 +258,9 @@ Item {
                 root.totFlatpak = parseInt(p[5]) || 1;
                 Logger.debug("System", `Updates arch=${root.updArch} aur=${root.updAur} flatpak=${root.updFlatpak}`);
             }
+        }
+        onExited: (code, status) => {
+            if (code !== 0) Logger.warn("System", `check_updates.sh exited with code ${code}`);
         }
     }
 

@@ -33,19 +33,23 @@ QtObject {
         return "info";
     }
 
+    function stamp() {
+        return Qt.formatDateTime(new Date(), "HH:mm:ss.zzz");
+    }
+
     function error(tag, msg) {
-        if (level >= 0) console.error(`[${tag}] ${msg}`);
+        if (level >= 0) console.error(`[${stamp()}] [${tag}] ${msg}`);
     }
 
     function warn(tag, msg) {
-        if (level >= 1) console.warn(`[${tag}] ${msg}`);
+        if (level >= 1) console.warn(`[${stamp()}] [${tag}] ${msg}`);
     }
 
     function info(tag, msg) {
-        if (level >= 2) console.info(`[${tag}] ${msg}`);
+        if (level >= 2) console.info(`[${stamp()}] [${tag}] ${msg}`);
     }
 
     function debug(tag, msg) {
-        if (level >= 3) console.debug(`[${tag}] ${msg}`);
+        if (level >= 3) console.debug(`[${stamp()}] [${tag}] ${msg}`);
     }
 }
